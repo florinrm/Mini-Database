@@ -62,6 +62,8 @@
 
 (define table1 (create-table "studenti" (list '("numar matricol") '("nume") '("prenume") '("grupa") '("medie"))))
 (define table2 (create-table "tabela cursuri" (list '("anul") '("semestru") '("disciplina") '("numar credite") '("numar teme"))))
+(define table3 (create-table "tabela cursuri" (list '("anul" 1 2) '("semestru" 1 2)
+                                                   '("disciplina" "Programarea calculatoarelor" "Paradigme de programare") '("numar credite" 5 6) '("numar teme" 2 3))))
 
 ;; create-table OK!
 
@@ -98,20 +100,56 @@
 ;= +------+----------+-----------------------------------+---------------+------------+      =
 ;============================================================================================
 (define db (add-table (add-table (init-database) table1) table2))
-
+db
 ;====================================
 ;=            Cerința 2             =
 ;=         Operația insert          =
 ;=            10 puncte             =
 ;====================================
+
+(define pairs (list '("disciplina" . "Structuri de date") '("anul" . 1) '("numar teme" . 3)))
+
+(define (get-columns-name-helper table) (
+                                  if (null? table)
+                                     null
+                                     (cons (car (car table)) (get-columns-name-helper (cdr table)))
+                                  )) ;; helper pentru numele coloanelor
+
+(define (get-columns-names table) (get-columns-name-helper (get-columns table))) ;; iau numele coloanelor
+
+(define (get-pair element list-pair) (
+                                      cond ((null? list-pair) null)
+                                           ((equal? element (car (car list-pair))) (car list-pair))
+                                           (else (get-pair element (cdr list-pair)))
+                                      )) ;; caut perechea dupa primul element din pereche --> it's ok!
+;(get-pair "anul" pairs)
+
+(define (build-pair list-pair list-name) (
+                                          cond ((null? list-name) '())
+                                               ((null? (get-pair (car list-name) list-pair)) (cons (list (car list-name) null) (build-pair list-pair (cdr list-name))))
+                                               (else (cons (get-pair (car list-name) list-pair) (build-pair list-pair (cdr list-name)))
+                                             ))) ;; reconstruiesc lista de perechi incat sa am NULL si la cele care nu erau in lista originala de perechi pt insert --> merge yey
+
+(define (add-in-columns table list-pair) (
+                                          if (or (null? table) (null? list-pair))
+                                             null
+                                             (cons (append (car table) (list (cdr (car list-pair)))) (add-in-columns (cdr table) (cdr list-pair)))
+                                          ))
+;(car pairs)
+;(append (list (car table3)) (add-in-columns (get-columns table3) (build-pair pairs (get-columns-names table3)))) ;;gata, folosim la insert, pairs e lista data in argument la insert
+
+;(build-pair pairs (get-columns-names table3))
+
 (define insert
   (λ (db table-name record)
     (
-     cond ((or (null? db) (null? record)) db)
-          ((equal? ((car (car db))) table-name) null)
-          (else insert (cdr db) table-name record)
-     )))
+     cond ((or (null? db) (null? record)) null)
+          ((equal? (car (car db)) table-name) (cons (append (list (car (car db))) (add-in-columns (get-columns (car db)) (build-pair record (get-columns-names (car db)))))
+                                                      (insert (cdr db) table-name record)))
+          (else (cons (car db) (insert (cdr db) table-name record))
+     ))))
 
+(insert db "tabela cursuri" pairs) ;; YAAAAY AM FACUT INSERTUUUUL
 
 ;====================================
 ;=            Cerința 3 a)          =
@@ -140,8 +178,9 @@
           (else simple-select (cdr db) table-name columns)
      )))
 
-;(define table3 (create-table "tabela cursuri" (list '("anul" 1 2) '("semestru" 1 2)
- ;                                                   '("disciplina" "Programarea calculatoarelor" "Paradigme de programare") '("numar credite" 5 6) '("numar teme" 2 3))))
+;; simple-select done!
+
+
 ;(define db1 (add-table (init-database) table3))
 ;(simple-select db1 "tabela cursuri" (list "disciplina" "anul"))
 
