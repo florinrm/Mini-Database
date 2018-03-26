@@ -47,7 +47,7 @@
 
 (define add-table
   (λ (db table)
-    (append db (list table))))
+    (cons table db)))
 
 (define remove-table-helper (λ (db table-name acc)
                               (
@@ -59,6 +59,18 @@
 (define remove-table
   (λ (db table-name)
     (remove-table-helper db table-name null)))
+
+(define table1 (create-table "studenti" (list '("numar matricol") '("nume") '("prenume") '("grupa") '("medie"))))
+(define table2 (create-table "tabela cursuri" (list '("anul") '("semestru") '("disciplina") '("numar credite") '("numar teme"))))
+
+;; create-table OK!
+
+;(display table2)
+;(display "\n")
+;(display table1)
+;(define data-base (init-database))
+;(get-columns (get-table (add-table (add-table data-base table1) table2) (car table1))) ;; add-table OK! remove-table OK! get-table OK! ;; get-columns OK!
+
 
 ;= Pentru testare, va trebui să definiți o bază de date (având identificatorul db) cu următoarele tabele
 
@@ -85,7 +97,7 @@
 ;= | III  | II       | Baze de date                      |             5 |          0 |      =
 ;= +------+----------+-----------------------------------+---------------+------------+      =
 ;============================================================================================
-(define db 'your-code-here)
+(define db (add-table (add-table (init-database) table1) table2))
 
 ;====================================
 ;=            Cerința 2             =
