@@ -8,37 +8,57 @@
 ;====================================
 
 ;= Funcțiile de acces
+
+;
+
 (define init-database
   (λ ()
-    'your-code-here))
+    null)) ;; initializez baza de date
+
+(define (create-table-helper table columns) (
+                                             if (null? columns)
+                                                table
+                                                (create-table-helper (append table (list (car columns))) (cdr columns))
+                                             )) ;; adaugarea numelor de coloane la lista tabela (aia care are doar numele tabelei)
 
 (define create-table
-  (λ (table columns-name)
-    'your-code-here))
+  (λ (table-name columns-name)
+    (create-table-helper (list table-name) columns-name))) ;; cream o tabela cu goala, doar cu numele coloanelor
+  
 
 (define get-name
   (λ (table)
-    'your-code-here))
+    (car table))) ;; numele tabelei
 
 (define get-columns
   (λ (table)
-    'your-code-here))
+    (cdr table))) ;; coloanele dintr-o baza de date
 
 (define get-tables
   (λ (db)
-    'your-code-here))
+    db)) ;; tabelele din baza de date aka baza de date in sine (care e o lista de tabele, iar o tabela o lista in sine)
 
 (define get-table
   (λ (db table-name)
-    'your-code-here))
+    (cond ((null? db) null)
+          ((equal? table-name (car (car db))) (car db))
+          (else (get-table (cdr db) table-name))
+          )))
 
 (define add-table
   (λ (db table)
-    'your-code-here))
+    (append db (list table))))
+
+(define remove-table-helper (λ (db table-name acc)
+                              (
+                               cond ((null? db) acc)
+                               ((not (equal? table-name (car (car db)))) (remove-table-helper (cdr db) table-name (append acc (car db))))
+                               (else (remove-table-helper (cdr db) table-name acc))
+                               )))
 
 (define remove-table
   (λ (db table-name)
-    'your-code-here))
+    (remove-table-helper db table-name null)))
 
 ;= Pentru testare, va trebui să definiți o bază de date (având identificatorul db) cu următoarele tabele
 
