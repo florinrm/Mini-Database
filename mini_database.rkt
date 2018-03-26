@@ -106,7 +106,11 @@
 ;====================================
 (define insert
   (λ (db table-name record)
-    'your-code-here))
+    (
+     cond ((or (null? db) (null? record)) db)
+          ((equal? ((car (car db))) table-name) null)
+          (else insert (cdr db) table-name record)
+     )))
 
 
 ;====================================
@@ -114,9 +118,32 @@
 ;=     Operația simple-select       =
 ;=             10 puncte            =
 ;====================================
+
+(define find-column (λ (table column) (
+                                       cond ((null? table) null)
+                                            ((equal? column (car (car table))) (cdr (car table))) ;; e returnata coloana fara numele acesteia
+                                            (else (find-column (cdr table) column)) ;; cautam in continuare coloana
+                                       ))) ;; cauta o coloana intr-o tabela
+
+(define simple-select-helper (λ (table columns acc) (
+                                                     cond ((or (null? table) (null? columns)) acc)
+                                                          ((not (null? (find-column table (car columns))))
+                                                                (simple-select-helper table (cdr columns) (append acc (list (find-column table (car columns))))))
+                                                          (else (simple-select-helper (table (cdr columns) acc)))
+                                                     ))) ;; adauga coloanele din lista existente in tabela intr-o lista de coloane
+
 (define simple-select
   (λ (db table-name columns)
-    'your-code-here))
+    (
+     cond ((or (null? db) (null? columns)) db)
+          ((equal? table-name (car (car db))) (simple-select-helper (get-columns (car db)) columns null))
+          (else simple-select (cdr db) table-name columns)
+     )))
+
+;(define table3 (create-table "tabela cursuri" (list '("anul" 1 2) '("semestru" 1 2)
+ ;                                                   '("disciplina" "Programarea calculatoarelor" "Paradigme de programare") '("numar credite" 5 6) '("numar teme" 2 3))))
+;(define db1 (add-table (init-database) table3))
+;(simple-select db1 "tabela cursuri" (list "disciplina" "anul"))
 
 ;====================================
 ;=            Cerința 3 b)          =
