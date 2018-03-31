@@ -1,4 +1,5 @@
 #lang racket
+
 (define NULL 'null)
 
 ;====================================
@@ -14,15 +15,10 @@
 
 ;; o tabela e o lista de liste care are ca prim element numele acesteia si restul sunt liste (liste de liste))
 
-(define (create-table-helper table columns) (
-                                             if (null? columns)
-                                                table
-                                                (create-table-helper (append table (list (car columns))) (cdr columns))
-                                             )) ;; adaugarea numelor de coloane la lista tabela (aia care are doar numele tabelei)
 
 (define create-table
   (λ (table-name columns-name)
-    (create-table-helper (list table-name) columns-name))) ;; cream o tabela cu goala, doar cu numele coloanelor
+    (cons table-name columns-name))) ;; cream o tabela cu goala, doar cu numele coloanelor
 
 (define get-name
   (λ (table) (
@@ -142,24 +138,24 @@
                                                ((null? (get-pair pairs (car columns))) (cons (list (car columns) NULL) (reconstruct-list pairs (cdr columns))))
                                                (else (cons (list (car (get-pair pairs (car columns))) (drop (get-pair pairs (car columns)) 1)) (reconstruct-list pairs (cdr columns))))
                                           ))
-(define pairs '(("Anul" . "I") ("Disciplină" . "Matematică")))
-(reconstruct-list pairs (get-columns (get-table db "Cursuri")))
-(define table (get-table db "Cursuri"))
+;(define pairs '(("Anul" . "I") ("Disciplină" . "Matematică")))
+;(reconstruct-list pairs (get-columns (get-table db "Cursuri")))
+;(define table (get-table db "Cursuri"))
 (define (pula table listing) (
                               if (or (null? table) (null? listing))
                                  null
                                  (cons (append (car table) (list (last (car listing)))) (pula (cdr table) (cdr listing)))
                               ))
-(pula (cdr table) (reconstruct-list pairs (get-columns (get-table db "Cursuri"))))
+;(pula (cdr table) (reconstruct-list pairs (get-columns (get-table db "Cursuri"))))
 
 (define (pula2 table listing) (
                               if (or (null? table) (null? listing))
                                  null
                                  (cons (append (list (car table)) (list (last (car listing)))) (pula2 (cdr table) (cdr listing)))
                               ))
-(define table-pula (create-table "Test" '("Coloana1" "Coloana2" "Coloana3")))
-(define pairs2 '(("Coloana2" . "Muie") ("Coloana1" . "Nan")))
-(pula2 (cdr table-pula) (reconstruct-list pairs2 (get-columns table-pula)))
+;(define table-pula (create-table "Test" '("Coloana1" "Coloana2" "Coloana3")))
+;(define pairs2 '(("Coloana2" . "Muie") ("Coloana1" . "Nan")))
+;(pula2 (cdr table-pula) (reconstruct-list pairs2 (get-columns table-pula)))
 
 (define (my-insert table record) (
                                   if (or (null? table) (null? record))
@@ -169,7 +165,7 @@
                                          (pula (cdr table) (reconstruct-list record (get-columns table)))
                                          (pula2 (cdr table) (reconstruct-list record (get-columns table)))
                                       ))))
-(my-insert table pairs)
+;(my-insert table pairs)
 
 (define insert
   (λ (db table-name record)
@@ -192,14 +188,12 @@
                                          ((equal? column (car (car table))) (cdr (car table)))
                                          (else (find-column (cdr table) column))
                                     ))
-;(find-column (cdr (get-table db "Cursuri")) "Disciplină")
 
 (define (search-columns table columns) (
                                         cond ((or (null? table) (null? columns)) null)
                                              ((null? (find-column table (car columns))) (search-columns table (cdr columns)))
                                              (else (cons (find-column table (car columns)) (search-columns table (cdr columns))))
                                         ))
-;(search-columns (cdr (get-table db "Cursuri")) (list "Disciplină" "Anul"))
 
 (define simple-select
   (λ (db table-name columns)
@@ -214,9 +208,74 @@
 ;=           Operația select        =
 ;=            30 de puncte          =
 ;====================================
+
+(define (index listing elem) (
+                              cond ((not (member elem listing)) -1)
+                                   ((null? listing) -1)
+                                   ((equal? elem (car listing)) 0)
+                                   (else (+ 1 (index (cdr listing) elem)))
+                              )) ;;list-ref
+
+(define (sort-asc column) (if (null column) null (sort column <)))
+(define (sort-desc column) (sort column >))
+(define (max column) (if (null? column) null (car (sort column >))))
+(define (min column) (if (null? column) null (car (sort column <))))
+(define (sum column) (
+                       if (null? column)
+                          0
+                          (+ (car column) (sum (cdr column)))
+                       ))
+
+(define (count column) (
+                        if (< (length column) 2)
+                           0
+                           (length (remove-duplicates (cdr column)))
+                        ))
+
+(define (avg column) (if (null? column)
+                         null
+                         (/ (sum column) (count column))))
+
+(define (op-column pair) (
+                          if (null? pair)
+                             null
+                             (
+                              cond ((equal? (car pair) 'max) (max (cdr pair)))
+                                   ((equal? (car pair) 'min) (min (cdr pair)))
+                                   ((equal? (car pair) 'sort-asc) (sort-asc (cdr pair)))
+                                   ((equal? (car pair) 'sum) (sum (cdr pair)))
+                                   ((equal? (car pair) 'avg) (avg (cdr pair)))
+                                   ((equal? (car pair) 'sort-desc) (sort-desc (cdr pair)))
+                                   (else (count pair)))))
+                              
+(define muie (list 'count 4 5 3 8 3))
+(op-column muie)
+
+(define (filter-col sign column value) (filter (λ (x) (sign x value)) column))
+(filter-col > (find-column (cdr (get-table db "Studenți")) "Medie") 9.90)
+
+(define (take-line table index) (
+                                 if (null? table)
+                                    null
+                                    (cons (list-ref (car table) index) (take-line (cdr table) index))
+                                 ))
+(cdr (get-table db "Cursuri"))
+(take-line (cdr (get-table db "Cursuri")) 2)
+
+(define (filter-table table sign column value) (
+                                                if (null? table)
+                                                   null
+                                                   '()
+                                                ))
+
+
 (define select
   (λ (db table-name columns conditions)
-    'your-code-here))
+    (
+     if (null? db)
+        null
+        (simple-select db table-name columns)
+     )))
 
 ;====================================
 ;=             Cerința 4            =
@@ -225,7 +284,7 @@
 ;====================================
 (define update
   (λ (db table-name values conditions)
-    'your-code-here))
+    null))
 
 ;====================================
 ;=             Cerința 5            =
@@ -234,7 +293,7 @@
 ;====================================
 (define delete
   (λ (db table-name conditions)
-    'your-code-here))
+    null))
 
 ;====================================
 ;=               Bonus              =
@@ -243,7 +302,9 @@
 ;====================================
 (define natural-join
   (λ (db tables columns conditions)
-    'your-code-here))
+    null))
+
+(list (cons 'sort-asc "Număr matricol") "Prenume" "Nume" (cons 'count "Medie"))
 
 (define default-results '(#f 0 () your-code-here)) ; ce rezultate default sunt întoarse în exerciții
 (define show-defaults 200) ; câte exerciții la care s-au întors rezultate default să fie arătate detaliat
