@@ -87,7 +87,7 @@
                                               '("Prenume" "Gigel" "Maria" "Ionel" "Ioana")
                                               '("Grupă" "321CA" "321CB" "321CC" "321CD")
                                               '("Medie" 9.82 9.91 9.99 9.87))))
-(define table2 (create-table "Cursuri" (list '("Anul" "I" "II" "IV" "I" "III")
+(define table2 (create-table "Cursuri" (list '("Anul" "I" "II" "III" "IV" "I" "III")
                                              '("Semestru" "I" "II" "I" "I" "II" "II")
                                              '("Disciplină" "Programarea calculatoarelor" "Paradigme de programare"
                                                             "Algoritmi paraleli și distribuiți" "Inteligență artificială"
@@ -130,9 +130,54 @@
 ;=         Operația insert          =
 ;=            10 puncte             =
 ;====================================
+
+(define (get-pair pairs column) (
+                                  cond ((null? pairs) null)
+                                       ((equal? column (car (first pairs))) (car pairs))
+                                       (else (get-pair (cdr pairs) column))
+                                 ))
+
+(define (reconstruct-list pairs columns) (
+                                          cond ((null? columns) null)
+                                               ((null? (get-pair pairs (car columns))) (cons (list (car columns) NULL) (reconstruct-list pairs (cdr columns))))
+                                               (else (cons (list (car (get-pair pairs (car columns))) (drop (get-pair pairs (car columns)) 1)) (reconstruct-list pairs (cdr columns))))
+                                          ))
+(define pairs '(("Anul" . "I") ("Disciplină" . "Matematică")))
+(reconstruct-list pairs (get-columns (get-table db "Cursuri")))
+(define table (get-table db "Cursuri"))
+(define (pula table listing) (
+                              if (or (null? table) (null? listing))
+                                 null
+                                 (cons (append (car table) (list (last (car listing)))) (pula (cdr table) (cdr listing)))
+                              ))
+(pula (cdr table) (reconstruct-list pairs (get-columns (get-table db "Cursuri"))))
+
+(define (pula2 table listing) (
+                              if (or (null? table) (null? listing))
+                                 null
+                                 (cons (append (list (car table)) (list (last (car listing)))) (pula2 (cdr table) (cdr listing)))
+                              ))
+(define table-pula (create-table "Test" '("Coloana1" "Coloana2" "Coloana3")))
+(define pairs2 '(("Coloana2" . "Muie") ("Coloana1" . "Nan")))
+(pula2 (cdr table-pula) (reconstruct-list pairs2 (get-columns table-pula)))
+
+(define (my-insert table record) (
+                                  if (or (null? table) (null? record))
+                                     null
+                                     (append (list (car table)) (
+                                      if (andmap list? (cdr table))
+                                         (pula (cdr table) (reconstruct-list record (get-columns table)))
+                                         (pula2 (cdr table) (reconstruct-list record (get-columns table)))
+                                      ))))
+(my-insert table pairs)
+
 (define insert
   (λ (db table-name record)
-    'your-code-here))
+    (
+     if (or (null? db) (null? (get-table db table-name)))
+        null
+        (cons (my-insert (get-table db table-name) record) (remove-table db table-name))
+     )))
 
 
 ;====================================
@@ -140,9 +185,29 @@
 ;=     Operația simple-select       =
 ;=             10 puncte            =
 ;====================================
+
+
+(define (find-column table column) (
+                                    cond ((null? table) null)
+                                         ((equal? column (car (car table))) (cdr (car table)))
+                                         (else (find-column (cdr table) column))
+                                    ))
+;(find-column (cdr (get-table db "Cursuri")) "Disciplină")
+
+(define (search-columns table columns) (
+                                        cond ((or (null? table) (null? columns)) null)
+                                             ((null? (find-column table (car columns))) (search-columns table (cdr columns)))
+                                             (else (cons (find-column table (car columns)) (search-columns table (cdr columns))))
+                                        ))
+;(search-columns (cdr (get-table db "Cursuri")) (list "Disciplină" "Anul"))
+
 (define simple-select
   (λ (db table-name columns)
-    'your-code-here))
+    (
+     cond ((or (null? db) (null? columns)) null)
+          ((null? (get-table db table-name)) null)
+          (else (search-columns (cdr (get-table db table-name)) columns))
+     )))
 
 ;====================================
 ;=            Cerința 3 b)          =
@@ -179,15 +244,6 @@
 (define natural-join
   (λ (db tables columns conditions)
     'your-code-here))
-(create-table "Company" '("Company_ID" "Company_Name" "Company_City"))
-(get-columns (create-table "Company" '("Company_ID" "Company_Name" "Company_City")))
-(get-columns (get-table db "Studenți"))
-(define (get-pula table) (
-                          if (null? table)
-                             null
-                             (cons (car (car table)) (get-pula (cdr table)))
-                          ))
-(get-pula (cdr (get-table db "Studenți")))
 
 (define default-results '(#f 0 () your-code-here)) ; ce rezultate default sunt întoarse în exerciții
 (define show-defaults 200) ; câte exerciții la care s-au întors rezultate default să fie arătate detaliat
