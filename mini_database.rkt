@@ -8,12 +8,11 @@
 ;====================================
 
 ;= Funcțiile de acces
-
-;
-
 (define init-database
   (λ ()
-    null)) ;; initializez baza de date
+    null))
+
+;; o tabela e o lista de liste care are ca prim element numele acesteia si restul sunt liste (liste de liste))
 
 (define (create-table-helper table columns) (
                                              if (null? columns)
@@ -24,15 +23,36 @@
 (define create-table
   (λ (table-name columns-name)
     (create-table-helper (list table-name) columns-name))) ;; cream o tabela cu goala, doar cu numele coloanelor
-  
 
 (define get-name
-  (λ (table)
-    (car table))) ;; numele tabelei
+  (λ (table) (
+    if (null? table)
+       null
+       (car table)))) ;; numele tabelei
 
-(define get-columns
-  (λ (table)
-    (cdr table))) ;; coloanele dintr-o baza de date
+(define (get-columns-helper table) (
+                             if (null? table)
+                                null
+                                    (cons (car table) (get-columns-helper (cdr table)))))
+(define (get-columns-helper2 table)
+  (
+   if (null? table)
+      null
+      (get-columns-helper table)
+   )) ;; cand nu sunt elemente in coloana
+
+(define (get-columns-helper3 table) (
+                          if (null? table)
+                             null
+                             (cons (car (car table)) (get-columns-helper3 (cdr table)))))
+
+(define (get-columns table) (
+        if (<= (length table) 2)
+            null
+            (if (not (andmap list? (cdr table)))
+                (cdr (get-columns-helper2 table))
+                (get-columns-helper3 (cdr table))
+                )))
 
 (define get-tables
   (λ (db)
@@ -40,39 +60,41 @@
 
 (define get-table
   (λ (db table-name)
-    (cond ((null? db) null)
+    (
+     cond ((null? db) null)
           ((equal? table-name (car (car db))) (car db))
           (else (get-table (cdr db) table-name))
-          )))
+     )))
 
 (define add-table
   (λ (db table)
     (cons table db)))
 
-(define remove-table-helper (λ (db table-name acc)
-                              (
-                               cond ((null? db) acc)
-                               ((not (equal? table-name (car (car db)))) (remove-table-helper (cdr db) table-name (append acc (car db))))
-                               (else (remove-table-helper (cdr db) table-name acc))
-                               )))
+(define (remove-helper db table-name) (
+                                      cond ((null? db) null)
+                                           ((equal? table-name (car (car db))) (remove-helper (cdr db) table-name))
+                                           (else (cons (car db) (remove-helper (cdr db) table-name)))
+                                      )) 
 
 (define remove-table
   (λ (db table-name)
-    (remove-table-helper db table-name null)))
+    (if (null? (get-table db table-name))
+        db
+        (remove-helper db table-name))))
 
-(define table1 (create-table "studenti" (list '("numar matricol") '("nume") '("prenume") '("grupa") '("medie"))))
-(define table2 (create-table "tabela cursuri" (list '("anul") '("semestru") '("disciplina") '("numar credite") '("numar teme"))))
-(define table3 (create-table "tabela cursuri" (list '("anul" 1 2) '("semestru" 1 2)
-                                                   '("disciplina" "Programarea calculatoarelor" "Paradigme de programare") '("numar credite" 5 6) '("numar teme" 2 3))))
-
-;; create-table OK!
-
-;(display table2)
-;(display "\n")
-;(display table1)
-;(define data-base (init-database))
-;(get-columns (get-table (add-table (add-table data-base table1) table2) (car table1))) ;; add-table OK! remove-table OK! get-table OK! ;; get-columns OK!
-
+(define table1 (create-table "Studenți" (list '("Număr matricol" 123 124 125 126)
+                                              '("Nume" "Ionescu" "Popescu" "Popa" "Georgescu")
+                                              '("Prenume" "Gigel" "Maria" "Ionel" "Ioana")
+                                              '("Grupă" "321CA" "321CB" "321CC" "321CD")
+                                              '("Medie" 9.82 9.91 9.99 9.87))))
+(define table2 (create-table "Cursuri" (list '("Anul" "I" "II" "IV" "I" "III")
+                                             '("Semestru" "I" "II" "I" "I" "II" "II")
+                                             '("Disciplină" "Programarea calculatoarelor" "Paradigme de programare"
+                                                            "Algoritmi paraleli și distribuiți" "Inteligență artificială"
+                                                            "Structuri de date" "Baze de date")
+                                             '("Număr credite" 5 6 5 6 5 5)
+                                             '("Număr teme" 2 3 3 3 3 0))))
+;(get-columns table1)
 
 ;= Pentru testare, va trebui să definiți o bază de date (având identificatorul db) cu următoarele tabele
 
@@ -100,89 +122,27 @@
 ;= +------+----------+-----------------------------------+---------------+------------+      =
 ;============================================================================================
 (define db (add-table (add-table (init-database) table1) table2))
-db
+
+;(get-columns table1)
+
 ;====================================
 ;=            Cerința 2             =
 ;=         Operația insert          =
 ;=            10 puncte             =
 ;====================================
-
-(define pairs (list '("disciplina" . "Structuri de date") '("anul" . 1) '("numar teme" . 3)))
-
-(define (get-columns-name-helper table) (
-                                  if (null? table)
-                                     null
-                                     (cons (car (car table)) (get-columns-name-helper (cdr table)))
-                                  )) ;; helper pentru numele coloanelor
-
-(define (get-columns-names table) (get-columns-name-helper (get-columns table))) ;; iau numele coloanelor
-
-(define (get-pair element list-pair) (
-                                      cond ((null? list-pair) null)
-                                           ((equal? element (car (car list-pair))) (car list-pair))
-                                           (else (get-pair element (cdr list-pair)))
-                                      )) ;; caut perechea dupa primul element din pereche --> it's ok!
-;(get-pair "anul" pairs)
-
-(define (build-pair list-pair list-name) (
-                                          cond ((null? list-name) '())
-                                               ((null? (get-pair (car list-name) list-pair)) (cons (list (car list-name) null) (build-pair list-pair (cdr list-name))))
-                                               (else (cons (get-pair (car list-name) list-pair) (build-pair list-pair (cdr list-name)))
-                                             ))) ;; reconstruiesc lista de perechi incat sa am NULL si la cele care nu erau in lista originala de perechi pt insert --> merge yey
-
-(define (add-in-columns table list-pair) (
-                                          if (or (null? table) (null? list-pair))
-                                             null
-                                             (cons (append (car table) (list (cdr (car list-pair)))) (add-in-columns (cdr table) (cdr list-pair)))
-                                          ))
-;(car pairs)
-;(append (list (car table3)) (add-in-columns (get-columns table3) (build-pair pairs (get-columns-names table3)))) ;;gata, folosim la insert, pairs e lista data in argument la insert
-
-;(build-pair pairs (get-columns-names table3))
-
 (define insert
   (λ (db table-name record)
-    (
-     cond ((or (null? db) (null? record)) null)
-          ((equal? (car (car db)) table-name) (cons (append (list (car (car db))) (add-in-columns (get-columns (car db)) (build-pair record (get-columns-names (car db)))))
-                                                      (insert (cdr db) table-name record)))
-          (else (cons (car db) (insert (cdr db) table-name record))
-     ))))
+    'your-code-here))
 
-(insert db "tabela cursuri" pairs) ;; YAAAAY AM FACUT INSERTUUUUL
 
 ;====================================
 ;=            Cerința 3 a)          =
 ;=     Operația simple-select       =
 ;=             10 puncte            =
 ;====================================
-
-(define find-column (λ (table column) (
-                                       cond ((null? table) null)
-                                            ((equal? column (car (car table))) (cdr (car table))) ;; e returnata coloana fara numele acesteia
-                                            (else (find-column (cdr table) column)) ;; cautam in continuare coloana
-                                       ))) ;; cauta o coloana intr-o tabela
-
-(define simple-select-helper (λ (table columns acc) (
-                                                     cond ((or (null? table) (null? columns)) acc)
-                                                          ((not (null? (find-column table (car columns))))
-                                                                (simple-select-helper table (cdr columns) (append acc (list (find-column table (car columns))))))
-                                                          (else (simple-select-helper (table (cdr columns) acc)))
-                                                     ))) ;; adauga coloanele din lista existente in tabela intr-o lista de coloane
-
 (define simple-select
   (λ (db table-name columns)
-    (
-     cond ((or (null? db) (null? columns)) db)
-          ((equal? table-name (car (car db))) (simple-select-helper (get-columns (car db)) columns null))
-          (else simple-select (cdr db) table-name columns)
-     )))
-
-;; simple-select done!
-
-
-;(define db1 (add-table (init-database) table3))
-;(simple-select db1 "tabela cursuri" (list "disciplina" "anul"))
+    'your-code-here))
 
 ;====================================
 ;=            Cerința 3 b)          =
@@ -219,3 +179,126 @@ db
 (define natural-join
   (λ (db tables columns conditions)
     'your-code-here))
+(create-table "Company" '("Company_ID" "Company_Name" "Company_City"))
+(get-columns (create-table "Company" '("Company_ID" "Company_Name" "Company_City")))
+(get-columns (get-table db "Studenți"))
+(define (get-pula table) (
+                          if (null? table)
+                             null
+                             (cons (car (car table)) (get-pula (cdr table)))
+                          ))
+(get-pula (cdr (get-table db "Studenți")))
+
+(define default-results '(#f 0 () your-code-here)) ; ce rezultate default sunt întoarse în exerciții
+(define show-defaults 200) ; câte exerciții la care s-au întors rezultate default să fie arătate detaliat
+(define prepend #t) (define name-ex '(testul testele trecut)) 
+(define : 'separator) (define punct 'string) (define puncte 'string) (define BONUS 'string) (define total 0) (define all '()) (define n-ex 0) (define p-ex 0) (define defaults '())
+(define (ex n sep p . s) (set! n-ex n) (set! p-ex p) (set! all (cons (list n p) all))) (define exercițiul ex) (define (p L) (map (λ (e) (display e) (display " ")) L) (newline))
+(define (check-exp given expected) (check-exp-part "" 1 given expected)) (define (check-exp-part part per given expected) (check-test part per equal? given expected "diferă de cel așteptat"))
+(define (check-in  given expected) (check-in-part  "" 1 given expected)) (define (check-in-part part per given expected) (check-test part per member given expected "nu se află printre variantele așteptate"))
+(define (check-set given expected) (check-set-part  "" 1 given expected)) (define (check-set-part part per given expected) (check-test part per (λ (x y) (apply equal? (map list->seteqv `(,given ,expected)))) given expected "nu este echivalent cu cel așteptat"))
+(define (check-set-unique given expected) (check-set-unique-part  "" 1 given expected)) (define (check-set-unique-part part per given expected) (check-test part per (λ (x y) (and (apply = (map length `(,given ,expected))) (apply equal? (map list->seteqv `(,given ,expected))))) given expected "nu este echivalent cu cel așteptat"))
+(define (check-test part percent tester given expected err-m) (if (not (tester given expected)) (and (when (member given default-results) (set! defaults (cons (if (< percent 1) (cons n-ex part) n-ex) defaults)))
+  (when (or (not (member given default-results)) (<= (length defaults) show-defaults))
+    (p `(NU: la ,(car name-ex) ,(if (< percent 1) (cons n-ex part) n-ex) rezultatul ,given ,err-m : ,expected))))
+ (let ((pts (* p-ex percent))) (and (if prepend (printf "+~v: " pts) (printf "OK: "))
+  (p (list (car name-ex) (if (< percent 1) (cons n-ex part) n-ex) (caddr name-ex) '+ pts (if (= pts 1) 'punct 'puncte))) (set! total (+ total pts))))))
+(define (sumar) (when (and (not (null? defaults)) (< show-defaults (length defaults))) (p `(... rezultatul implicit dat la ,(cadr name-ex) ,(reverse defaults)))) (p `(total: ,total puncte)))
+(define Task ex) (define Bonus ex)
+
+(Task 0 : 20 puncte)
+(check-exp-part 'init-database .05 (get-tables (init-database)) '())
+(check-exp-part 'create-table1 .05 (get-name (create-table "Company" '("Company_ID" "Company_Name" "Company_City"))) "Company")
+(check-exp-part 'create-table2 .05 (get-columns (create-table "Company" '("Company_ID" "Company_Name" "Company_City"))) '("Company_ID" "Company_Name" "Company_City"))
+(check-exp-part 'add-table1 .06 (map get-name (get-tables (add-table (init-database) (create-table "Test" '("Coloana1" "Coloana2" "Coloana3"))))) '("Test"))
+(check-exp-part 'add-table2 .06 (sort (map get-name (get-tables (add-table db (create-table "Test" '("Coloana1" "Coloana2" "Coloana3"))))) string<?) '("Cursuri" "Studenți" "Test"))
+(check-exp-part 'add-table3 .06 (sort (map get-name (get-tables (add-table (add-table db (create-table "Test" '("Coloana1" "Coloana2" "Coloana3"))) (create-table "Tabela1" '("Coloana1"))))) string<?) '("Cursuri" "Studenți" "Tabela1" "Test"))
+(check-exp-part 'get-table1 .05 (get-columns (get-table db "Studenți")) '("Număr matricol" "Nume" "Prenume" "Grupă" "Medie"))
+(check-exp-part 'get-table2 .05 (get-columns (get-table db "Cursuri")) '("Anul" "Semestru" "Disciplină" "Număr credite" "Număr teme"))
+(check-exp-part 'get-tables .05 (sort (map get-name (get-tables db)) string<?) '("Cursuri" "Studenți"))
+(check-exp-part 'remove-table1 .06 (map get-name (get-tables (remove-table db "Studenți"))) '("Cursuri"))
+(check-exp-part 'remove-table2 .06 (map get-name (get-tables (remove-table db "Cursuri"))) '("Studenți"))
+(check-exp-part 'remove-table3 .1 (map get-name (get-tables (remove-table (remove-table db "Cursuri") "Studenți"))) '())
+(check-exp-part 'remove-table4 .1 (map get-name (get-tables (add-table (remove-table (remove-table db "Cursuri") "Studenți") (create-table "Test" '("Coloana1"))))) '("Test"))
+(check-exp-part 'remove-table5 .1 (map get-name (get-tables (remove-table (add-table (remove-table (remove-table db "Cursuri") "Studenți") (create-table "Test" '("Coloana1"))) "Test"))) '())
+(check-exp-part 'remove-table6 .1 (get-columns (get-table (remove-table db "Cursuri") "Studenți")) '("Număr matricol" "Nume" "Prenume" "Grupă" "Medie"))
+
+(Task 1 : 20 puncte)
+(check-exp-part 'simple-select1 0.05 (simple-select db "Studenți" '("Nume" "Prenume")) '(("Ionescu" "Popescu" "Popa" "Georgescu") ("Gigel" "Maria" "Ionel" "Ioana")))
+(check-exp-part 'simple-select2 0.05 (simple-select db "Studenți" '("Număr matricol" "Medie")) '((123 124 125 126) (9.82 9.91 9.99 9.87)))
+(check-exp-part 'simple-select3 0.05 (simple-select db "Studenți" '("Prenume" "Nume" "Număr matricol" "Medie")) '(("Gigel" "Maria" "Ionel" "Ioana") ("Ionescu" "Popescu" "Popa" "Georgescu") (123 124 125 126) (9.82 9.91 9.99 9.87)))
+(check-exp-part 'simple-select4 0.05 (simple-select db "Cursuri" '("Număr credite" "Număr teme")) '((5 6 5 6 5 5) (2 3 3 3 3 0)))
+(check-exp-part 'simple-select5 0.05 (simple-select db "Cursuri" '("Anul" "Semestru" "Număr teme")) '(("I" "II" "III" "IV" "I" "III") ("I" "II" "I" "I" "II" "II") (2 3 3 3 3 0)))
+(check-exp-part 'simple-select6 0.05 (simple-select db "Cursuri" '("Disciplină" "Număr credite")) '(("Programarea calculatoarelor" "Paradigme de programare" "Algoritmi paraleli și distribuiți" "Inteligență artificială" "Structuri de date" "Baze de date") (5 6 5 6 5 5)))
+(check-exp-part 'simple-select-&-insert1 0.1 (simple-select (insert db "Cursuri" '(("Disciplină" . "Matematică"))) "Cursuri" '("Disciplină" "Număr credite")) '(("Programarea calculatoarelor" "Paradigme de programare" "Algoritmi paraleli și distribuiți" "Inteligență artificială" "Structuri de date" "Baze de date" "Matematică") (5 6 5 6 5 5 null)))
+(check-exp-part 'simple-select-&-insert2 0.1 (simple-select (insert db "Cursuri" '(("Disciplină" . "Matematică") ("Anul" . "I"))) "Cursuri" '("Disciplină" "Număr credite" "Anul" "Număr credite")) '(("Programarea calculatoarelor" "Paradigme de programare" "Algoritmi paraleli și distribuiți" "Inteligență artificială" "Structuri de date" "Baze de date" "Matematică") (5 6 5 6 5 5 null) ("I" "II" "III" "IV" "I" "III" "I") (5 6 5 6 5 5 null)))
+(check-exp-part 'simple-select-&-insert3 0.1 (simple-select (insert (insert db "Cursuri" '(("Disciplină" . "Matematică") ("Anul" . "I"))) "Cursuri" '(("Disciplină" . "Limbaje formale și automate") ("Anul" . "III")  ("Număr teme" . 1) )) "Cursuri" '("Disciplină" "Număr credite" "Anul" "Număr teme")) '(("Programarea calculatoarelor" "Paradigme de programare" "Algoritmi paraleli și distribuiți" "Inteligență artificială" "Structuri de date" "Baze de date" "Matematică" "Limbaje formale și automate") (5 6 5 6 5 5 null null) ("I" "II" "III" "IV" "I" "III" "I" "III") (2 3 3 3 3 0 null 1)))
+(check-exp-part 'simple-select-&-insert4 0.1 (simple-select (insert (insert (insert db "Cursuri" '(("Disciplină" . "Matematică") ("Anul" . "I"))) "Cursuri" '(("Disciplină" . "Limbaje formale și automate") ("Anul" . "III")  ("Număr teme" . 1) )) "Studenți" '(("Număr matricol" . 134) ("Nume" . "Dumitru") ("Prenume" . "Gigel"))) "Studenți" '("Prenume" "Nume" "Număr matricol")) '(("Gigel" "Maria" "Ionel" "Ioana" "Gigel") ("Ionescu" "Popescu" "Popa" "Georgescu" "Dumitru") (123 124 125 126 134)))
+(check-exp-part 'simple-select-&-insert5 0.1 (simple-select (insert (insert (insert db "Cursuri" '(("Disciplină" . "Matematică") ("Anul" . "I"))) "Cursuri" '(("Disciplină" . "Limbaje formale și automate") ("Anul" . "III")  ("Număr teme" . 1) )) "Studenți" '(("Număr matricol" . 134) ("Nume" . "Dumitru") ("Prenume" . "Gigel"))) "Studenți" '("Prenume" "Nume" "Medie")) '(("Gigel" "Maria" "Ionel" "Ioana" "Gigel") ("Ionescu" "Popescu" "Popa" "Georgescu" "Dumitru") (9.82 9.91 9.99 9.87 null)))  
+(check-exp-part 'simple-select-&-insert6 0.1 (simple-select (foldl (λ(record db) (insert db "Tabela" record)) (add-table (init-database) (create-table "Tabela" '("Coloana1" "Coloana2" "Coloana3"))) (for/list ([k (in-naturals)] [x (in-range 100)] [y (in-naturals 20)]) (list (cons "Coloana1" k) (cons "Coloana2" x) (cons "Coloana3" y)))) "Tabela" '("Coloana3" "Coloana2" "Coloana1")) (list (for/list ([k (in-naturals 20)] [x (in-range 100)]) k) (for/list ([k (in-naturals)] [x (in-range 100)]) k) (for/list ([k (in-naturals 0)] [x (in-range 100)]) k)))
+(check-exp-part 'simple-select-&-insert7 0.1 (simple-select (foldl (λ(record db) (insert db "Tabela" record)) (add-table (init-database) (create-table "Tabela" '("Coloana1" "Coloana2" "Coloana3" "Coloana4" "Coloana5"))) (for/list ([k (in-naturals 256)] [x (in-range 1000)] [y (in-naturals 520)]) (list (cons "Coloana1" k) (cons "Coloana2" x) (cons "Coloana3" y)))) "Tabela" '("Coloana3" "Coloana2" "Coloana1" "Coloana4" "Coloana5")) (list (for/list ([k (in-naturals 520)] [x (in-range 1000)]) k) (for/list ([k (in-naturals)] [x (in-range 1000)]) k) (for/list ([k (in-naturals 256)] [x (in-range 1000)]) k) (for/list ([x (in-range 1000)]) NULL) (for/list ([x (in-range 1000)]) NULL)))
+
+(Task 2 : 30 puncte)
+(check-exp-part 'select1 0.05 (select db "Studenți" (list "Nume" "Medie") (list (list >= "Medie" 9.9))) '(("Popescu" "Popa") (9.91 9.99)))
+(check-exp-part 'select2 0.05 (select db "Studenți" (list "Nume" "Prenume" "Medie") (list (list > "Număr matricol" 124))) '(("Popa" "Georgescu") ("Ionel" "Ioana") (9.99 9.87)))
+(check-exp-part 'select3 0.05 (select db "Studenți" (list "Prenume" "Nume") (list (list < "Medie" 9.9))) '(("Gigel" "Ioana") ("Ionescu" "Georgescu")))
+(check-exp-part 'select4 0.05 (select db "Studenți" (list "Prenume" "Grupă" "Nume") (list (list < "Medie" 9.9) (list >= "Număr matricol" 120))) '(("Gigel" "Ioana") ("321CA" "321CD") ("Ionescu" "Georgescu")))
+(check-exp-part 'select5 0.05 (select db "Cursuri" (list "Anul" "Disciplină" "Semestru") (list (list equal? "Semestru" "I") (list >= "Număr credite" 5))) '(("I" "III" "IV") ("Programarea calculatoarelor" "Algoritmi paraleli și distribuiți" "Inteligență artificială") ("I" "I" "I")))
+(check-exp-part 'select6 0.05 (select db "Cursuri" (list "Anul" "Disciplină" "Semestru") (list (list equal? "Anul" "I") (list > "Număr teme" 0))) '(("I" "I") ("Programarea calculatoarelor" "Structuri de date") ("I" "II")))
+(check-exp-part 'select7 0.05 (select db "Cursuri" (list "Anul" "Disciplină" "Semestru") (list (list equal? "Semestru" "I") (list > "Număr teme" 0) (list >= "Număr credite" 5))) '(("I" "III" "IV") ("Programarea calculatoarelor" "Algoritmi paraleli și distribuiți" "Inteligență artificială") ("I" "I" "I")))
+(check-exp-part 'select8 0.05 (select db "Studenți" (list "Nume" (cons 'min "Medie")) '()) '(("Ionescu" "Popescu" "Popa" "Georgescu") 9.82))
+(check-exp-part 'select9 0.05 (select db "Studenți" (list "Prenume" "Nume" (cons 'max "Medie")) '()) '(("Gigel" "Maria" "Ionel" "Ioana") ("Ionescu" "Popescu" "Popa" "Georgescu") 9.99))
+(check-exp-part 'select10 0.05 (select db "Studenți" (list (cons 'sort-asc "Număr matricol") "Prenume" "Nume" (cons 'count "Medie")) '()) '((123 124 125 126) ("Gigel" "Maria" "Ionel" "Ioana") ("Ionescu" "Popescu" "Popa" "Georgescu") 4))
+(check-exp-part 'select11 0.05 (select db "Studenți" (list "Nume" (cons 'min "Medie")) (list (list > "Medie" 9.5))) '(("Ionescu" "Popescu" "Popa" "Georgescu") 9.82))
+(check-exp-part 'select12 0.05 (select db "Studenți" (list "Prenume" "Nume" (cons 'max "Medie")) (list (list >= "Număr matricol" 125))) '(("Ionel" "Ioana") ("Popa" "Georgescu") 9.99))
+(check-exp-part 'select13 0.05 (select db "Studenți" (list (cons 'sort-asc "Număr matricol") "Prenume" "Nume" (cons 'count "Medie")) (list (list > "Medie" 9.85))) '((124 125 126) ("Maria" "Ionel" "Ioana") ("Popescu" "Popa" "Georgescu") 3))
+(check-exp-part 'select14 0.05 (select db "Studenți" (list (cons 'avg "Număr matricol") "Prenume" "Nume" (cons 'sort-desc "Medie")) (list (list > "Medie" 9.85))) '(125 ("Maria" "Ionel" "Ioana") ("Popescu" "Popa" "Georgescu") (9.99 9.91 9.87)))
+(check-exp-part 'select15 0.1 (select (foldl (λ(record db) (insert db "Tabela" record)) (add-table (init-database) (create-table "Tabela" '("Coloana1" "Coloana2" "Coloana3" "Coloana4" "Coloana5"))) (for/list ([k (in-naturals 256)] [x (in-range 10)] [y (in-naturals 520)]) (list (cons "Coloana1" k) (cons "Coloana2" x) (cons "Coloana3" y) (cons "Coloana5" (+ x y)) (cons "Coloana4" (- x y))))) "Tabela" (list (cons 'min "Coloana3") (cons 'count "Coloana2") (cons 'sort-asc "Coloana1") (cons 'sort-desc "Coloana4") (cons 'sum "Coloana5")) '()) '(520 10 (256 257 258 259 260 261 262 263 264 265) (-520 -520 -520 -520 -520 -520 -520 -520 -520 -520) 5290))
+(check-exp-part 'select16 0.1 (select (foldl (λ(record db) (insert db "Tabela" record)) (add-table (init-database) (create-table "Tabela" '("Coloana1" "Coloana2" "Coloana3" "Coloana4" "Coloana5"))) (for/list ([k (in-naturals 256)] [x (in-range 10)] [y (in-naturals 520)]) (list (cons "Coloana1" k) (cons "Coloana2" x) (cons "Coloana3" y) (cons "Coloana5" (+ x y)) (cons "Coloana4" (+ (- x y) k))))) "Tabela" (list (cons 'min "Coloana3") (cons 'count "Coloana2") (cons 'sort-asc "Coloana1") (cons 'sort-desc "Coloana4") (cons 'sum "Coloana5")) (list (list > "Coloana1" 260) (list < "Coloana4" -257)))  '(525 2 (261 262) (-258 -259) 1062))
+(check-exp-part 'select17 0.1 (select (foldl (λ(record db) (insert db "Tabela" record)) (add-table (init-database) (create-table "Tabela" '("Coloana1" "Coloana2" "Coloana3" "Coloana4" "Coloana5"))) (for/list ([k (in-naturals 256)] [x (in-range 1000)] [y (in-naturals 520)]) (list (cons "Coloana1" k) (cons "Coloana2" x) (cons "Coloana3" y) (cons "Coloana5" (+ x y)) (cons "Coloana4" (- x y))))) "Tabela" (list (cons 'min "Coloana3") (cons 'max "Coloana2") (cons 'avg "Coloana1") (cons 'count "Coloana4") (cons 'sum "Coloana5")) (list (list > "Coloana1" 260))) '(525 999 758 1 1516380))
+
+(Task 3 : 20 puncte)
+(check-exp-part 'update1 0.1 (simple-select (update db "Studenți" (list (cons "Medie" 10)) (list (list >= "Medie" 9.5))) "Studenți" '("Nume" "Prenume" "Medie")) '(("Ionescu" "Popescu" "Popa" "Georgescu") ("Gigel" "Maria" "Ionel" "Ioana") (10 10 10 10)))
+(check-exp-part 'update2 0.1 (simple-select (update db "Cursuri" (list (cons "Număr teme" 3)) (list (list < "Număr teme" 3) (list equal? "Anul" "I"))) "Cursuri" '("Disciplină" "Număr teme" "Anul")) '(("Programarea calculatoarelor" "Paradigme de programare" "Algoritmi paraleli și distribuiți" "Inteligență artificială" "Structuri de date" "Baze de date") (3 3 3 3 3 0) ("I" "II" "III" "IV" "I" "III")))
+(check-exp-part 'update3 0.1  (simple-select (update (update db "Cursuri" (list (cons "Număr teme" 3)) (list (list < "Număr teme" 3) (list equal? "Anul" "I"))) "Cursuri" (list (cons "Număr credite" 6) (cons "Semestru" "II")) (list (list equal? "Semestru" "I")))  "Cursuri" '("Anul" "Semestru" "Număr credite" "Număr teme")) '(("I" "II" "III" "IV" "I" "III") ("II" "II" "II" "II" "II" "II") (6 6 6 6 5 5) (3 3 3 3 3 0)))
+(check-exp-part 'update4 0.15 (select (update (update db "Cursuri" (list (cons "Număr teme" 3)) (list (list < "Număr teme" 3) (list equal? "Anul" "I"))) "Cursuri" (list (cons "Număr credite" 6) (cons "Anul" "I") (cons "Semestru" "II")) (list (list equal? "Semestru" "I")))  "Cursuri" (list (cons 'count "Anul") (cons 'count "Semestru") (cons 'sum "Număr credite") (cons 'sort-desc "Număr teme")) (list (list > "Număr credite" 0))) '(3 1 34 (3 3 3 3 3 0)))
+(check-exp-part 'update5 0.15 (select (update (foldl (λ(record db) (insert db "Tabela" record)) (add-table (init-database) (create-table "Tabela" '("Coloana1" "Coloana2" "Coloana3"))) (for/list ([k (in-naturals)] [x (in-range 100)] [y (in-naturals 20)]) (list (cons "Coloana1" k) (cons "Coloana2" x) (cons "Coloana3" y)))) "Tabela" (list (cons "Coloana1" 222) (cons "Coloana2" 694)) (list (list < "Coloana2" 80) (list > "Coloana1" 5))) "Tabela" (list (cons 'count "Coloana1") (cons 'sum "Coloana2")) '()) '(27 53161))
+(check-exp-part 'update6 0.2 (select (update (foldl (λ(record db) (insert db "Tabela" record)) (add-table (init-database) (create-table "Tabela" '("Coloana1" "Coloana2" "Coloana3"))) (for/list ([k (in-naturals)] [x (in-range 100)] [y (in-naturals 20)]) (list (cons "Coloana1" k) (cons "Coloana2" x) (cons "Coloana3" y)))) "Tabela" (list (cons "Coloana1" 222) (cons "Coloana2" 694)) (list (list < "Coloana2" 80) (list > "Coloana1" 5))) "Tabela" (list (cons 'count "Coloana1") (cons 'sum "Coloana2")) '()) '(27 53161))
+(check-exp-part 'update7 0.2 (select (update (foldl (λ(record db) (insert db "Tabela" record)) (add-table (init-database) (create-table "Tabela" '("Coloana1" "Coloana2" "Coloana3"))) (for/list ([k (in-naturals)] [x (in-range 100)] [y (in-naturals 20)]) (list (cons "Coloana1" k) (cons "Coloana2" x) (cons "Coloana3" y)))) "Tabela" (list (cons "Coloana1" 128) (cons "Coloana2" 542) (cons "Coloana5" 452)) (list (list < "Coloana2" 80) (list > "Coloana1" 5))) "Tabela" (list (cons 'count "Coloana1") (cons 'min "Coloana2") (cons 'max "Coloana3")) (list (list > "Coloana1" 100))) '(1 542 99))
+
+(Task 4 : 10 puncte)
+(check-exp-part 'delete1 0.1 (simple-select (delete db "Studenți" (list (list < "Medie" 9.9))) "Studenți" '("Nume" "Prenume")) '(("Popescu" "Popa") ("Maria" "Ionel")))
+(check-exp-part 'delete2 0.1 (simple-select (delete db "Studenți" (list (list >= "Medie" 9.9))) "Studenți" '("Nume" "Prenume" "Medie")) '(("Ionescu" "Georgescu") ("Gigel" "Ioana") (9.82 9.87)))
+(check-exp-part 'delete3 0.1 (simple-select (delete db "Cursuri" (list (list equal? "Anul" "I") (list equal? "Semestru" "I"))) "Cursuri" '("Disciplină" "Semestru" "Număr teme")) '(("Paradigme de programare" "Algoritmi paraleli și distribuiți" "Inteligență artificială" "Structuri de date" "Baze de date") ("II" "I" "I" "II" "II") (3 3 3 3 0)))
+(check-exp-part 'delete4 0.1 (simple-select (delete db "Studenți" (list (list < "Medie" 5) (list equal? "Nume" "Popescu"))) "Studenți" '("Nume" "Prenume" "Medie")) '(("Ionescu" "Popescu" "Popa" "Georgescu") ("Gigel" "Maria" "Ionel" "Ioana") (9.82 9.91 9.99 9.87)))
+(check-exp-part 'delete5 0.1 (simple-select (delete db "Studenți" (list (list >= "Medie" 9.8) (list equal? "Nume" "Popescu"))) "Studenți" '("Nume" "Prenume" "Medie")) '(("Ionescu" "Popa" "Georgescu") ("Gigel" "Ionel" "Ioana") (9.82 9.99 9.87)))
+(check-exp-part 'delete6 0.1 (simple-select (delete db "Cursuri" (list (list equal? "Anul" "I") (list >= "Număr credite" 5))) "Cursuri" '("Semestru" "Disciplină" "Număr teme" "Număr credite")) '(("II" "I" "I" "II") ("Paradigme de programare" "Algoritmi paraleli și distribuiți" "Inteligență artificială" "Baze de date") (3 3 3 0) (6 5 6 5)))
+(check-exp-part 'delete7 0.1 (simple-select (delete db "Cursuri" (list (list >= "Număr credite" 5))) "Cursuri" '("Semestru" "Disciplină" "Număr teme" "Număr credite")) '())
+(check-exp-part 'delete8 0.1 (simple-select (delete db "Cursuri" (list (list equal? "Anul" "I") (list equal? "Semestru" "I") (list > "Număr credite" 5) )) "Cursuri" '("Semestru" "Disciplină" "Număr teme" "Număr credite")) '(("I" "II" "I" "I" "II" "II") ("Programarea calculatoarelor" "Paradigme de programare" "Algoritmi paraleli și distribuiți" "Inteligență artificială" "Structuri de date" "Baze de date") (2 3 3 3 3 0) (5 6 5 6 5 5)))
+(check-exp-part 'delete9 0.1  (simple-select (delete (foldl (λ(record db) (insert db "Tabela" record)) (add-table (init-database) (create-table "Tabela" '("Coloana1" "Coloana2" "Coloana3"))) (for/list ([k (in-naturals)] [x (in-range 100)] [y (in-naturals 20)]) (list (cons "Coloana1" k) (cons "Coloana2" x) (cons "Coloana3" y)))) "Tabela" (list (list < "Coloana2" 100) (list > "Coloana1" 5))) "Tabela" '("Coloana3" "Coloana2" "Coloana1")) '((20 21 22 23 24 25) (0 1 2 3 4 5) (0 1 2 3 4 5))) 
+(check-exp-part 'delete10 0.1 (simple-select (delete (foldl (λ(record db) (insert db "Tabela" record)) (add-table (init-database) (create-table "Tabela" '("Coloana1" "Coloana2" "Coloana3"))) (for/list ([k (in-naturals)] [x (in-range 100)] [y (in-naturals 20)]) (list (cons "Coloana1" k) (cons "Coloana2" x) (cons "Coloana3" y)))) "Tabela" (list (list < "Coloana2" 80) (list > "Coloana1" 5))) "Tabela" '("Coloana1")) '((0 1 2 3 4 5 80 81 82 83 84 85 86 87 88 89 90 91 92 93 94 95 96 97 98 99)))
+
+(Task 5 : 20 puncte)
+(check-exp-part 'natural-join1 0.2 (natural-join (insert (insert (insert (insert (insert (insert (insert (insert (insert (insert (insert (insert (add-table (add-table (init-database) (create-table "Category" '("ID" "Category_Name"))) (create-table "Product" '("ID" "Product_Name"))) "Category" (list '("ID" . 1) '("Category_Name" . "Mobiles"))) "Category" (list '("ID" . 2) '("Category_Name" . "Laptops"))) "Category" (list '("ID" . 3) '("Category_Name" . "Tablet"))) "Category" (list '("ID" . 4) '("Category_Name" . "Cameras"))) "Category" (list '("ID" . 5) '("Category_Name" . "Gaming"))) "Product" (list '("ID" . 1) '("Product_Name" . "Nokia"))) "Product" (list '("ID" . 1) '("Product_Name" . "Samsung"))) "Product" (list '("ID" . 2) '("Product_Name" . "HP"))) "Product" (list '("ID" . 2) '("Product_Name" . "Dell"))) "Product" (list '("ID" . 3) '("Product_Name" . "Apple"))) "Product" (list '("ID" . 4) '("Product_Name" . "Nikon"))) "Product" (list '("Product_Name" . "Playstation"))) '("Product" "Category") '("ID" "Product_Name" "Category_Name") '()) '((1 1 2 2 3 4) ("Nokia" "Samsung" "HP" "Dell" "Apple" "Nikon") ("Mobiles" "Mobiles" "Laptops" "Laptops" "Tablet" "Cameras")))
+(check-exp-part 'natural-join2 0.2 (natural-join (insert (insert (insert (insert (insert (insert (insert (insert (insert (insert (insert (insert (add-table (add-table (init-database) (create-table "Category" '("ID" "Category_Name"))) (create-table "Product" '("ID" "Product_Name"))) "Category" (list '("ID" . 1) '("Category_Name" . "Mobiles"))) "Category" (list '("ID" . 2) '("Category_Name" . "Laptops"))) "Category" (list '("ID" . 3) '("Category_Name" . "Tablet"))) "Category" (list '("ID" . 4) '("Category_Name" . "Cameras"))) "Category" (list '("ID" . 5) '("Category_Name" . "Gaming"))) "Product" (list '("ID" . 1) '("Product_Name" . "Nokia"))) "Product" (list '("ID" . 1) '("Product_Name" . "Samsung"))) "Product" (list '("ID" . 2) '("Product_Name" . "HP"))) "Product" (list '("ID" . 2) '("Product_Name" . "Dell"))) "Product" (list '("ID" . 3) '("Product_Name" . "Apple"))) "Product" (list '("ID" . 4) '("Product_Name" . "Nikon"))) "Product" (list '("Product_Name" . "Playstation"))) '("Product" "Category") '("Product_Name" "Category_Name") '()) '(("Nokia" "Samsung" "HP" "Dell" "Apple" "Nikon") ("Mobiles" "Mobiles" "Laptops" "Laptops" "Tablet" "Cameras")))
+(check-exp-part 'natural-join3 0.2 (natural-join (insert (insert (insert (insert (insert (insert (insert (insert (insert (insert (insert (insert (add-table (add-table (init-database) (create-table "Category" '("ID" "Category_Name"))) (create-table "Product" '("ID" "Product_Name"))) "Category" (list '("ID" . 1) '("Category_Name" . "Mobiles"))) "Category" (list '("ID" . 2) '("Category_Name" . "Laptops"))) "Category" (list '("ID" . 3) '("Category_Name" . "Tablet"))) "Category" (list '("ID" . 4) '("Category_Name" . "Cameras"))) "Category" (list '("ID" . 5) '("Category_Name" . "Gaming"))) "Product" (list '("ID" . 1) '("Product_Name" . "Nokia"))) "Product" (list '("ID" . 1) '("Product_Name" . "Samsung"))) "Product" (list '("ID" . 2) '("Product_Name" . "HP"))) "Product" (list '("ID" . 2) '("Product_Name" . "Dell"))) "Product" (list '("ID" . 3) '("Product_Name" . "Apple"))) "Product" (list '("ID" . 4) '("Product_Name" . "Nikon"))) "Product" (list '("Product_Name" . "Playstation"))) '("Product" "Category") '("Category_Name" "Product_Name") (list (list >= "ID" 2))) '(("Laptops" "Laptops" "Tablet" "Cameras") ("HP" "Dell" "Apple" "Nikon")))
+(define test_table1 (create-table "Foods" '("Item_ID" "Item_Name" "Item_Unit" "Company_ID")))
+(define test_records1 (list (list '("Item_ID" . 1) '("Item_Name" . "Chex Mix") '("Item_Unit" . "Pcs") '("Company_ID" . 16))
+                       (list '("Item_ID" . 6) '("Item_Name" . "Cheez-It") '("Item_Unit" . "Pcs") '("Company_ID" . 15))
+                       (list '("Item_ID" . 2) '("Item_Name" . "BN Biscuit") '("Item_Unit" . "Pcs") '("Company_ID" . 15))
+                       (list '("Item_ID" . 3) '("Item_Name" . "Mighty Munch") '("Item_Unit" . "Pcs") '("Company_ID" . 17))
+                       (list '("Item_ID" . 4) '("Item_Name" . "Pot Rice") '("Item_Unit" . "Pcs") '("Company_ID" . 15))
+                       (list '("Item_ID" . 5) '("Item_Name" . "Jaffa Cakes") '("Item_Unit" . "Pcs") '("Company_ID" . 18))
+                       (list '("Item_ID" . 7) '("Item_Name" . "Salt n Shake") '("Item_Unit" . "Pcs"))))
+(define test_table2 (create-table "Company" '("Company_ID" "Company_Name" "Company_City")))
+(define test_records2 (list (list '("Company_ID" . 18) '("Company_Name" . "Oder All") '("Company_City" . "Boston"))
+                       (list '("Company_ID" . 15) '("Company_Name" . "Jack Hill Ltd") '("Company_City" . "London"))
+                       (list '("Company_ID" . 16) '("Company_Name" . "Akas Foods") '("Company_City" . "Delhi"))
+                       (list '("Company_ID" . 17) '("Company_Name" . "Foodies") '("Company_City" . "London"))
+                       (list '("Company_ID" . 19) '("Company_Name" . "sip-n-Bite") '("Company_City" . "New York"))))
+(define test_db (add-table (add-table (init-database) test_table1) test_table2))
+(define test_db1 (foldl (λ(record db) (insert db "Foods" record)) test_db test_records1))
+(define test_db2 (foldl (λ(record db) (insert db "Company" record)) test_db1 test_records2))
+(check-exp-part 'natural-join4 0.2 (natural-join test_db2 '("Foods" "Company") '("Company_ID" "Company_City" "Item_Name" "Company_Name" "Item_Unit") '()) '((16 15 15 15 17 18) ("Delhi" "London" "London" "London" "London" "Boston") ("Chex Mix" "Cheez-It" "BN Biscuit" "Pot Rice" "Mighty Munch" "Jaffa Cakes") ("Akas Foods" "Jack Hill Ltd" "Jack Hill Ltd" "Jack Hill Ltd" "Foodies" "Oder All") ("Pcs" "Pcs" "Pcs" "Pcs" "Pcs" "Pcs"))) 
+(check-exp-part 'natural-join5 0.2 (natural-join test_db2 '("Foods" "Company") '("Company_City" "Item_Name" "Company_Name" "Item_Unit") (list (list > "Company_ID" 15))) '(("Delhi" "London" "Boston") ("Chex Mix" "Mighty Munch" "Jaffa Cakes") ("Akas Foods" "Foodies" "Oder All") ("Pcs" "Pcs" "Pcs")))
+(sumar)
