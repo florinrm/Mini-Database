@@ -78,6 +78,8 @@
         db
         (remove-helper db table-name))))
 
+
+
 (define table1 (create-table "Studenți" (list '("Număr matricol" 123 124 125 126)
                                               '("Nume" "Ionescu" "Popescu" "Popa" "Georgescu")
                                               '("Prenume" "Gigel" "Maria" "Ionel" "Ioana")
@@ -187,7 +189,7 @@
                                     cond ((null? table) null)
                                          ((equal? column (car (car table))) (cdr (car table)))
                                          (else (find-column (cdr table) column))
-                                    ))
+                                    )) ;; returneaza o coloana dupa numele acesteia (fara numele acesteia)
 
 (define (search-columns table columns) (
                                         cond ((or (null? table) (null? columns)) null)
@@ -249,24 +251,82 @@
                                    (else (count pair)))))
                               
 (define muie (list 'count 4 5 3 8 3))
-(op-column muie)
+;(op-column muie)
 
 (define (filter-col sign column value) (filter (λ (x) (sign x value)) column))
-(filter-col > (find-column (cdr (get-table db "Studenți")) "Medie") 9.90)
+;(filter-col > (find-column (cdr (get-table db "Studenți")) "Medie") 9.90)
 
 (define (take-line table index) (
                                  if (null? table)
                                     null
-                                    (cons (list-ref (car table) index) (take-line (cdr table) index))
-                                 ))
-(cdr (get-table db "Cursuri"))
-(take-line (cdr (get-table db "Cursuri")) 2)
+                                    (cons (list-ref (car table) index) (take-line (cdr table) index)))) ;; ia o linie dupa index
+;(cdr (get-table db "Cursuri"))
+;(take-line (cdr (get-table db "Cursuri")) 6)
+;(take-line (cdr (get-table db "Cursuri")) 1)
+;(take-line (cdr (get-table db "Cursuri")) 0) 
 
+(define (take-line-name table column elem) (
+                                            if (null? table)
+                                               null
+                                               (take-line table (add1 (index (find-column table column) elem)))
+                                            )) ;; iau o linie dupa un element specific dintr-o coloana specifica
+
+
+;(take-line-name (cdr (get-table db "Cursuri")) "Număr teme" 2) ;; ia bine
+(define (get-column-index table column) (
+                                         if (null? table)
+                                            null
+                                            (index (get-columns table) column)
+                                         )) ;; iau indexul unei coloane (0 indexed)
+;(get-column-index (get-table db "Cursuri") "Anul")
+(define (find-column-with-name table column) (
+                                              if (null? table)
+                                                 null
+                                                 (cons column (find-column (cdr (get-table db "Cursuri")) "Număr credite"))
+                                              ))
+
+
+(define (take-lines-column table column) (
+                                          if (or (null? table) (null? column))
+                                             null
+                                             '()
+                                          ))
+
+;(define (filter-table-helper table index column) (
+ ;                                                 cond ((or (null? table) (> index (length table))) null)
+  ;                                                   ((member (list-ref (take-line table index) (index table column)) column)
+   ;                                                           (cons (take-line table index) (filter-table-helper table (add1 index) column)))
+    ;                                                 (else (filter-table-helper table (add1 index) column))
+     ;                                             ))
+
+;(define (filter-table table sign column value) (
+ ;                                               if (null? table)
+  ;                                                 null
+   ;                                                (filter-table-helper (cdr table) 1 (filter-col sign column value))
+    ;                                               
+     ;                                           ))
+
+
+
+(find-column-with-name (cdr (get-table db "Cursuri")) "Număr teme")
+(list-ref (take-line-name (cdr (get-table db "Cursuri")) "Disciplină" "Structuri de date") (get-column-index (get-table db "Cursuri") "Anul")) ;; so goood
+(get-column-index (get-table db "Cursuri") "Număr teme")
+(filter-col > (find-column (cdr (get-table db "Studenți")) "Medie") 9.90)
+(take-line (cdr (get-table db "Cursuri")) 1)
+(index (get-columns (get-table db "Cursuri")) "Număr teme")
+(find-column (cdr (get-table db "Cursuri")) "Număr credite")
+
+(define (filter-table-helper table sign column value index) (
+                                                             cond ((or (null? table) (> index (length table))) null)
+                                                                  ((member (list-ref (take-line (cdr table) index) (get-column-index table column)) (filter-col sign (find-column (cdr table) column) value))
+                                                                   (cons (take-line (cdr table) index) (filter-table-helper table sign column value (add1 index))))
+                                                                  (else (filter-table-helper table sign column value (add1 index)))
+                                                             )) ; iau toata tabela cu tot cu nume, coloana ca string index incepand cu 1
 (define (filter-table table sign column value) (
-                                                if (null? table)
-                                                   null
-                                                   '()
-                                                ))
+                                                 if (null? table)
+                                                     null
+                                                     (filter-table-helper table sign column value 1))) ; filtrez tabela dupa conditie
+(filter-table (get-table db "Cursuri") < "Număr teme" 1)
 
 
 (define select
@@ -304,7 +364,6 @@
   (λ (db tables columns conditions)
     null))
 
-(list (cons 'sort-asc "Număr matricol") "Prenume" "Nume" (cons 'count "Medie"))
 
 (define default-results '(#f 0 () your-code-here)) ; ce rezultate default sunt întoarse în exerciții
 (define show-defaults 200) ; câte exerciții la care s-au întors rezultate default să fie arătate detaliat
