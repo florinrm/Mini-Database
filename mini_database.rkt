@@ -326,7 +326,34 @@
                                                  if (null? table)
                                                      null
                                                      (filter-table-helper table sign column value 1))) ; filtrez tabela dupa conditie
+
 (filter-table (get-table db "Cursuri") < "Număr teme" 1)
+
+
+
+(define (insert-column-helper table column entries) (
+                                        if (null? entries)
+                                           null
+                                           (cons (list-ref (car entries) (get-column-index table column)) (insert-column-helper table column (cdr entries)))
+                                        ))
+(define (insert-column table column entries) (
+                                              cons column (insert-column-helper table column entries)
+                                              ))
+(define pula-mea (filter-table (get-table db "Cursuri") < "Număr teme" 3))
+(insert-column (get-table db "Cursuri") "Număr teme" pula-mea)
+
+(define (insert-pula-mea table columns entries) (
+                                                 if (or (null? table) (null? columns))
+                                                    null
+                                                    (cons (insert-column table (car columns) entries) (insert-pula-mea table (cdr columns) entries))
+                                                 ))
+
+(define (recreate-table table entries) (
+                                        if (null? entries)
+                                           (cons (car table) (get-columns table))
+                                           (cons (car table) (insert-pula-mea table (get-columns table) entries))
+                                        ))
+(recreate-table (get-table db "Cursuri") (filter-table (get-table db "Cursuri") equal? "Număr teme" 1))
 
 
 (define select
