@@ -327,7 +327,7 @@
                                                  null
                                                  (list-ref column index)
                                               ))
-;(get-elem-column-index (find-column (cdr (get-table db "Cursuri")) "Anul") 0)
+
 (define (get-all-col-index table columns index) (
                                            if (null? columns)
                                               null
@@ -338,7 +338,6 @@
                                       null
                                       (get-all-col-index table (get-columns table) index)
                                    ))
-;(muie-viorel (get-table db "Cursuri") 0)
 
 (define (filter-table-helper table sign column value index) (
                                                              cond ((or (null? table) (> index (length (cdr table)))) null)
@@ -351,9 +350,6 @@
                                                       ((not (andmap list? (cdr table))) table)
                                                      (else (filter-table-helper table sign column value 0)))) ; filtrez tabela dupa conditie
 
-;(filter-table (get-table db "Cursuri") < "Număr teme" 3)
-
-
 
 (define (insert-column-helper table column entries) (
                                         if (null? entries)
@@ -363,8 +359,6 @@
 (define (insert-column table column entries) (
                                               cons column (insert-column-helper table column entries)
                                               ))
-(define pula-mea (filter-table (get-table db "Cursuri") < "Număr teme" 3))
-;(insert-column (get-table db "Cursuri") "Număr teme" pula-mea)
 
 (define (insert-pula-mea table columns entries) (
                                                  if (or (null? table) (null? columns))
@@ -379,23 +373,7 @@
                                                (cons (car table) (get-columns table))
                                                (cons (car table) (insert-pula-mea table (get-columns table) entries))
                                         ))) ; reconstructia de tabel filtrat
-(define (muie-muie table list-entries) (
-                                        cond ((null? table) null)
-                                             ((null? list-entries) table)
-                                             ((not (andmap list? (cdr table))) table)
-                                             (else (cons (recreate-table table (filter-table table (first (car list-entries)) (second (car list-entries)) (third (car list-entries))))
-                                                 (muie-muie table (cdr list-entries))))
-                                           
-                                        ))
 
-
-
-(define muie-viorel-tudose (recreate-table (get-table db "Cursuri") (filter-table (get-table db "Cursuri") > "Număr teme" 1)))
-(define ia-pula (recreate-table muie-viorel-tudose (filter-table muie-viorel-tudose equal? "Număr teme" 4)))
-;(recreate-table ia-pula (filter-table ia-pula equal? "Număr credite" 6))
-;ia-pula
-;(define muie-viorel-tudose (recreate-table (get-table db "Cursuri") (filter-table (get-table db "Cursuri") < "Număr teme" 4)))
-;(recreate-table muie-viorel-tudose (filter-table muie-viorel-tudose equal? "Număr credite" 6))
 
 (define (rebuild-filt-table table list-entries) (
                                                  if (or (null? table) (null? list-entries))
@@ -404,6 +382,27 @@
                                                                         (second (car list-entries)) (third (car list-entries)))) (cdr list-entries))
                                                  ))
 
+(define (get-lines-helper table index) (
+                                        if (or (null? table) (> index (- (length table) 1)))
+                                           null
+                                           (cons (muie-viorel table index) (get-lines-helper table (add1 index)))
+                                        ))
+
+(define (get-lines table) (
+                           if (or (null? table) (not (andmap list? (cdr table))))
+                              null
+                              (get-lines-helper table 0)
+                           ))
+
+;(get-lines (rebuild-filt-table (get-table db "Studenți") (list (list > "Medie" 5))))
+;(get-lines (rebuild-filt-table (get-table db "Cursuri") (list (list < "Număr teme" 4) (list equal? "Semestru" "II"))))
+
+(define (filter-null lines) (
+                             cond ((null? lines) null)
+                                  ((andmap null? (car lines)) (filter-null (cdr lines)))
+                                  (else (cons (car lines) (filter-null (cdr lines))))
+                             ))
+;(filter-null (get-lines (rebuild-filt-table (get-table db "Cursuri") (list (list < "Număr teme" 4) (list equal? "Semestru" "II")))))
 
 (define simple-select-filtered
   (λ (db table-name columns conditions)
@@ -419,7 +418,8 @@
      if (null? db)
         null
         (simple-select-filtered db table-name columns conditions)
-     )))
+     )
+    ))
 
 ;====================================
 ;=             Cerința 4            =
@@ -435,9 +435,26 @@
 ;=           Operația remove        =
 ;=              10 puncte           =
 ;====================================
+
+(define (checking list1 list2) (
+                                cond ((null? list1) '())
+                                     ((member (car list1) list2) (checking (cdr list1) list2))
+                                     (else (cons (car list1) (checking (cdr list1) list2)))
+                                ))
+;(cons (cons (get-name (get-table db "Cursuri")) (checking (filter-null (get-lines (get-table db "Cursuri")))
+            ;                                         (filter-null (get-lines (rebuild-filt-table (get-table db "Cursuri")
+             ;                                                                                    (list (list equal? "Anul" "I") (list equal? "Semestru" "I")))))))
+      ;(remove-table db "Cursuri"))
+
 (define delete
   (λ (db table-name conditions)
-    null))
+    '(
+        ;cond ((null? db) null)
+        ;     ((null? conditions) (cons (cons table-name (get-columns (get-table db table-name))) (remove-table db table-name)))
+        ;     (else (cons (cons (get-name (get-table db table-name)) (checking (filter-null (get-lines (get-table db table-name)))
+        ;                                             (filter-null (get-lines (rebuild-filt-table (get-table db "Studenți")
+        ;                                                                                         conditions))))) (remove-table db table-name)))
+        )))
 
 ;====================================
 ;=               Bonus              =
