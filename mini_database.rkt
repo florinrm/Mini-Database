@@ -186,9 +186,15 @@
 
 
 (define (find-column table column) (
-                                    cond ((null? table) null)
-                                         ((equal? column (car (car table))) (cdr (car table)))
-                                         (else (find-column (cdr table) column))
+                                    if (null? table)
+                                       null
+                                       (
+                                        if (andmap list? table)
+                                           (if (equal? column (car (car table))) (cdr (car table))
+                                               (find-column (cdr table) column))
+                                           (if (equal? column (car table)) (cdr (car table))
+                                               (find-column (cdr table) column))
+                                        )
                                     )) ;; returneaza o coloana dupa numele acesteia (fara numele acesteia)
 
 (define (search-columns table columns) (
@@ -257,7 +263,7 @@
 ;(filter-col > (find-column (cdr (get-table db "Studenți")) "Medie") 9.90)
 
 (define (take-line table index) (
-                                 if (null? table)
+                                 if (or (null? table) (> (sub1 index) (length (cdr table)))) 
                                     null
                                     (cons (list-ref (car table) index) (take-line (cdr table) index)))) ;; ia o linie dupa index
 ;(cdr (get-table db "Cursuri"))
@@ -308,26 +314,44 @@
 
 
 
-(find-column-with-name (cdr (get-table db "Cursuri")) "Număr teme")
-(list-ref (take-line-name (cdr (get-table db "Cursuri")) "Disciplină" "Structuri de date") (get-column-index (get-table db "Cursuri") "Anul")) ;; so goood
-(get-column-index (get-table db "Cursuri") "Număr teme")
-(filter-col > (find-column (cdr (get-table db "Studenți")) "Medie") 9.90)
-(take-line (cdr (get-table db "Cursuri")) 1)
-(index (get-columns (get-table db "Cursuri")) "Număr teme")
-(find-column (cdr (get-table db "Cursuri")) "Număr credite")
+;(find-column-with-name (cdr (get-table db "Cursuri")) "Număr teme")
+;(list-ref (take-line-name (cdr (get-table db "Cursuri")) "Disciplină" "Structuri de date") (get-column-index (get-table db "Cursuri") "Anul")) ;; so goood
+;(get-column-index (get-table db "Cursuri") "Număr teme")
+;(filter-col > (find-column (cdr (get-table db "Studenți")) "Medie") 9.90)
+;(take-line (cdr (get-table db "Cursuri")) 1)
+;(index (get-columns (get-table db "Cursuri")) "Număr teme")
+;(find-column (cdr (get-table db "Cursuri")) "Număr credite")
+
+(define (get-elem-column-index column index) (
+                                              if (or (< (length column) 2) (> index (length (cdr column))))
+                                                 null
+                                                 (list-ref column index)
+                                              ))
+;(get-elem-column-index (find-column (cdr (get-table db "Cursuri")) "Anul") 0)
+(define (get-all-col-index table columns index) (
+                                           if (null? columns)
+                                              null
+                                              (cons (get-elem-column-index (find-column (cdr table) (car columns)) index) (get-all-col-index table (cdr columns) index))
+                                           ))
+(define (muie-viorel table index) (
+                                   if (or (null? table) (> index (length (cdr table))))
+                                      null
+                                      (get-all-col-index table (get-columns table) index)
+                                   ))
+;(muie-viorel (get-table db "Cursuri") 0)
 
 (define (filter-table-helper table sign column value index) (
-                                                             cond ((or (null? table) (> index (length table))) null)
-                                                                  ((member (list-ref (take-line (cdr table) index) (get-column-index table column)) (filter-col sign (find-column (cdr table) column) value))
-                                                                   (cons (take-line (cdr table) index) (filter-table-helper table sign column value (add1 index))))
+                                                             cond ((or (null? table) (> index (length (cdr table)))) null)
+                                                                  ((member (list-ref (muie-viorel table index) (get-column-index table column)) (filter-col sign (find-column (cdr table) column) value))
+                                                                   (cons (muie-viorel table index) (filter-table-helper table sign column value (add1 index))))
                                                                   (else (filter-table-helper table sign column value (add1 index)))
                                                              )) ; iau toata tabela cu tot cu nume, coloana ca string index incepand cu 1
 (define (filter-table table sign column value) (
-                                                 if (null? table)
-                                                     null
-                                                     (filter-table-helper table sign column value 1))) ; filtrez tabela dupa conditie
+                                                 cond ((null? table) null)
+                                                      ((not (andmap list? (cdr table))) table)
+                                                     (else (filter-table-helper table sign column value 0)))) ; filtrez tabela dupa conditie
 
-(filter-table (get-table db "Cursuri") < "Număr teme" 1)
+;(filter-table (get-table db "Cursuri") < "Număr teme" 3)
 
 
 
@@ -340,7 +364,7 @@
                                               cons column (insert-column-helper table column entries)
                                               ))
 (define pula-mea (filter-table (get-table db "Cursuri") < "Număr teme" 3))
-(insert-column (get-table db "Cursuri") "Număr teme" pula-mea)
+;(insert-column (get-table db "Cursuri") "Număr teme" pula-mea)
 
 (define (insert-pula-mea table columns entries) (
                                                  if (or (null? table) (null? columns))
@@ -349,19 +373,52 @@
                                                  ))
 
 (define (recreate-table table entries) (
-                                        if (null? entries)
-                                           (cons (car table) (get-columns table))
-                                           (cons (car table) (insert-pula-mea table (get-columns table) entries))
+                                        if (not (andmap list? (cdr table)))
+                                           table
+                                           (if (null? entries)
+                                               (cons (car table) (get-columns table))
+                                               (cons (car table) (insert-pula-mea table (get-columns table) entries))
+                                        ))) ; reconstructia de tabel filtrat
+(define (muie-muie table list-entries) (
+                                        cond ((null? table) null)
+                                             ((null? list-entries) table)
+                                             ((not (andmap list? (cdr table))) table)
+                                             (else (cons (recreate-table table (filter-table table (first (car list-entries)) (second (car list-entries)) (third (car list-entries))))
+                                                 (muie-muie table (cdr list-entries))))
+                                           
                                         ))
-(recreate-table (get-table db "Cursuri") (filter-table (get-table db "Cursuri") equal? "Număr teme" 1))
 
+
+
+(define muie-viorel-tudose (recreate-table (get-table db "Cursuri") (filter-table (get-table db "Cursuri") > "Număr teme" 1)))
+(define ia-pula (recreate-table muie-viorel-tudose (filter-table muie-viorel-tudose equal? "Număr teme" 4)))
+;(recreate-table ia-pula (filter-table ia-pula equal? "Număr credite" 6))
+;ia-pula
+;(define muie-viorel-tudose (recreate-table (get-table db "Cursuri") (filter-table (get-table db "Cursuri") < "Număr teme" 4)))
+;(recreate-table muie-viorel-tudose (filter-table muie-viorel-tudose equal? "Număr credite" 6))
+
+(define (rebuild-filt-table table list-entries) (
+                                                 if (or (null? table) (null? list-entries))
+                                                    table
+                                                    (rebuild-filt-table (recreate-table table (filter-table table (first (car list-entries))
+                                                                        (second (car list-entries)) (third (car list-entries)))) (cdr list-entries))
+                                                 ))
+
+
+(define simple-select-filtered
+  (λ (db table-name columns conditions)
+    (
+     cond ((or (null? db) (null? columns)) null)
+          ((null? (rebuild-filt-table (get-table db table-name) conditions)) null)
+          (else (search-columns (cdr (rebuild-filt-table (get-table db table-name) conditions)) columns))
+     )))
 
 (define select
   (λ (db table-name columns conditions)
     (
      if (null? db)
         null
-        (simple-select db table-name columns)
+        (simple-select-filtered db table-name columns conditions)
      )))
 
 ;====================================
