@@ -259,10 +259,10 @@
                                    (else (count column)))))
                               
 (define muie (list 4 5 3 8 3))
-(maximum muie)
+;(maximum muie)
 
 (define (filter-col sign column value) (filter (λ (x) (sign x value)) column))
-(filter-col > (find-column (cdr (get-table db "Cursuri")) "Număr teme") 1)
+;(filter-col > (find-column (cdr (get-table db "Cursuri")) "Număr teme") 1)
 
 ;(take-line-name (cdr (get-table db "Cursuri")) "Număr teme" 2) ;; ia bine
 (define (get-column-index table column) (
@@ -276,7 +276,7 @@
 ;(find-column-with-name (cdr (get-table db "Cursuri")) "Număr teme")
 ;(list-ref (take-line-name (cdr (get-table db "Cursuri")) "Disciplină" "Structuri de date") (get-column-index (get-table db "Cursuri") "Anul")) ;; so goood
 ;(get-column-index (get-table db "Cursuri") "Număr teme")
-(filter-col > (find-column (cdr (get-table db "Cursuri")) "Număr teme") 2)
+;(filter-col > (find-column (cdr (get-table db "Cursuri")) "Număr teme") 2)
 ;(take-line (cdr (get-table db "Cursuri")) 1)
 ;(index (get-columns (get-table db "Cursuri")) "Număr teme")
 ;(find-column (cdr (get-table db "Cursuri")) "Număr credite")
@@ -304,7 +304,7 @@
                                     null
                                     (get-table-lines-helper table 0)))
 
-(get-line-index (get-table db "Cursuri") 6)
+;(get-line-index (get-table db "Cursuri") 6)
 
 ;(define (filter-table-helper table sign column value index) (
  ;                                                            cond ((or (null? table) (> index (length (cdr table)))) null)
@@ -333,7 +333,7 @@
                                                       ((not (andmap list? (cdr table))) table)
                                                      (else (filter-table-helper table sign column value 0)))) ; filtrez tabela dupa conditie
 
-(filter-table (get-table db "Cursuri") > "Număr teme" 2)
+;(filter-table (get-table db "Cursuri") > "Număr teme" 2)
 
 
 (define (insert-column-helper table column entries) (
@@ -374,12 +374,12 @@
                                   (else (cons (car lines) (filter-null (cdr lines))))))
 
 
-;(rebuild-filt-table (get-table db "Cursuri") (list (list < "Număr teme" 4) (list equal? "Semestru" "I"))) ;; merge struna
+(rebuild-filt-table (get-table db "Cursuri") (list (list < "Număr teme" 4) (list equal? "Semestru" "I"))) ;; merge struna
 ;(get-column-index (get-table db "Cursuri") "Număr teme")
                                  
 ;(get-table-lines (get-table db "Cursuri")) ;; e ok
 ;(get-table-lines (rebuild-filt-table (get-table db "Cursuri") (list (list < "Număr teme" 4) (list equal? "Semestru" "I")))) ;; e ok
-;(recreate-table (get-table db "Cursuri") (get-table-lines (rebuild-filt-table (get-table db "Cursuri") (list (list < "Număr teme" 3) (list equal? "Semestru" "I"))))) ;; awww yissss
+(recreate-table (get-table db "Cursuri") (get-table-lines (rebuild-filt-table (get-table db "Cursuri") (list (list < "Număr teme" 3) (list equal? "Semestru" "I"))))) ;; awww yissss
 ; tabel filtrat fara probleme!
 
 (define (find-entry-by-elem table column elem entries) (
@@ -444,6 +444,34 @@
 ;=           Operația update        =
 ;=            20 de puncte          =
 ;====================================
+
+;(get-line-index (get-table db "Cursuri") 4)
+(define (replace table entry column value) (
+                                         if (or (null? table) (null? entry))
+                                            null
+                                            (append (take entry (get-column-index table column)) (list value) (drop entry (add1 (get-column-index table column))))
+                                         )) ;; merge! -> inlocuiesc o valoare intr-un entry
+;(replace (get-table db "Cursuri") (get-line-index (get-table db "Cursuri") 4) "Număr credite" 69)
+
+(define (replace-values table entry pairs) (
+                                            cond ((null? table) null)
+                                                 ((null? entry) null)
+                                                 ((null? pairs) entry)
+                                                 (else (replace-values table (replace table entry (car (car pairs)) (cdr (car pairs))) (cdr pairs))) ;; merge!
+                                            ))
+;(replace-values (get-table db "Cursuri") (get-line-index (get-table db "Cursuri") 4) (list (cons "Număr teme" 4) (cons "Număr credite" 69) (cons "Anul" 1)))
+
+(define (replace-all-values table entries pairs) (
+                                                  cond ((null? table) null)
+                                                       ((null? entries) null)
+                                                       ((null? pairs) entries)
+                                                       (else (cons (replace-values table (car entries) pairs) (replace-all-values table (cdr entries) pairs))))) ;; merge <3
+
+;; valorile inlocuite
+(recreate-table (get-table db "Cursuri") (replace-all-values (get-table db "Cursuri") (get-table-lines (get-table db "Cursuri")) (list (cons "Număr teme" 4) (cons "Număr credite" 69) (cons "Anul" 1))))
+
+;(rebuild-filt-table (get-table db table-name) conditions)
+
 (define update
   (λ (db table-name values conditions)
     null))
