@@ -121,7 +121,6 @@
 ;============================================================================================
 (define db (add-table (add-table (init-database) table1) table2))
 
-;(get-columns table1)
 
 ;====================================
 ;=            Cerința 2             =
@@ -133,13 +132,13 @@
                                   cond ((null? pairs) null)
                                        ((equal? column (car (first pairs))) (car pairs))
                                        (else (get-pair (cdr pairs) column))
-                                 ))
+                                 )) ;daca nu am coloane intr-o lista -> lista de perechi pentru toate coloanele - daca nu am SD -> ("SD" . NULL)
 
 (define (reconstruct-list pairs columns) (
                                           cond ((null? columns) null)
                                                ((null? (get-pair pairs (car columns))) (cons (list (car columns) NULL) (reconstruct-list pairs (cdr columns))))
                                                (else (cons (list (car (get-pair pairs (car columns))) (drop (get-pair pairs (car columns)) 1)) (reconstruct-list pairs (cdr columns))))
-                                          ))
+                                          )) ;reconstruiesc o lista bazata pe o lista de perechi ce trebuie sa fie inserate
 ;(define pairs '(("Anul" . "I") ("Disciplină" . "Matematică")))
 ;(reconstruct-list pairs (get-columns (get-table db "Cursuri")))
 ;(define table (get-table db "Cursuri"))
@@ -166,8 +165,7 @@
                                       if (andmap list? (cdr table))
                                          (pula (cdr table) (reconstruct-list record (get-columns table)))
                                          (pula2 (cdr table) (reconstruct-list record (get-columns table)))
-                                      ))))
-;(my-insert table pairs)
+                                      )))) ;; fac o lista de mai multe liste cu 2 elemente, transformata dintr-o lista de perechi
 
 (define insert
   (λ (db table-name record)
@@ -234,7 +232,6 @@
                           (+ (car column) (suma (cdr column)))
                        ))
 
-;(define (number-duplicates
 (find-column (get-table db "Cursuri") "Anul")
 
 (define (delete-duplicates-helper listing acc) (
@@ -381,35 +378,17 @@
                                   (else (cons (car lines) (filter-null (cdr lines))))))
 
 
-(rebuild-filt-table (get-table db "Cursuri") (list (list < "Număr teme" 4) (list equal? "Semestru" "I"))) ;; merge struna -> tabelul filtrat
+;(rebuild-filt-table (get-table db "Cursuri") (list (list < "Număr teme" 4) (list equal? "Semestru" "I"))) ;; merge struna -> tabelul filtrat
 ;(get-column-index (get-table db "Cursuri") "Număr teme")
                                  
 ;(get-table-lines (get-table db "Cursuri")) ;; e ok
 ;(get-table-lines (rebuild-filt-table (get-table db "Cursuri") (list (list < "Număr teme" 4) (list equal? "Semestru" "I")))) ;; e ok
-(recreate-table (get-table db "Cursuri") (get-table-lines (rebuild-filt-table (get-table db "Cursuri") (list (list < "Număr teme" 4) (list equal? "Semestru" "I"))))) ;; awww yissss
+;(recreate-table (get-table db "Cursuri") (get-table-lines (rebuild-filt-table (get-table db "Cursuri") (list (list < "Număr teme" 4) (list equal? "Semestru" "I"))))) ;; awww yissss
 ; tabel filtrat fara probleme!
-
-(define (find-entry-by-elem table column elem entries) (
-                                                        cond ((null? table) table)
-                                                             ((not (andmap list? (cdr table))) null)
-                                                             ((not (member elem (find-column (cdr table) column))) null)
-                                                             ((null? entries) null)
-                                                             ((equal? elem (list-ref (car entries) (get-column-index table column))) (car entries))
-                                                             (else (find-entry-by-elem table column elem (cdr entries)))
-                                                        ))
+                                                        
 ;(find-entry-by-elem (get-table db "Cursuri") "Disciplină" "Inteligență artificială"
 ;                    (get-table-lines (rebuild-filt-table (get-table db "Cursuri") (list (list < "Număr teme" 4) (list equal? "Semestru" "I"))))) ;; e ok!
 
-(define (sort-entry table column-name column entries) (
-                                           cond ((or (null? table) (null? column)) null)
-                                                ((null? entries) entries)
-                                                ((not (andmap list? (cdr table))) null)
-                                                (else (cons (find-entry-by-elem table column-name (car column) entries) (sort-entry table column-name (cdr column)
-                                                                                                                                    (remove (find-entry-by-elem table column-name (car column) entries)
-                                                                                                                                            entries))))
-                                           ))
-(define lel (filter-null (sort-entry (get-table db "Cursuri") "Număr credite" (sort (find-column (cdr (get-table db "Cursuri")) "Număr credite") >)
-            (get-table-lines (rebuild-filt-table (get-table db "Cursuri") (list (list < "Număr teme" 4) (list equal? "Semestru" "I")))))))
 
 ;(recreate-table (get-table db "Cursuri") lel)
 
@@ -519,22 +498,6 @@
 (define (update-table lines1 lines2 lines3) (
                                                     update-table-helper lines1 lines2 lines3 null
                                                   ))
-;(update db "Studenți" (list (cons "Medie" 10)) (list (list >= "Medie" 9.5)))
-(recreate-table (get-table db "Cursuri")
-              (update-table (get-table-lines (get-table db "Cursuri"))
-              (get-table-lines (get-table (delete db "Cursuri" (list (list < "Număr teme" 4) (list equal? "Semestru" "I"))) "Cursuri"))
-              (replace-all-values (rebuild-filt-table (get-table db "Cursuri") (list (list < "Număr teme" 4) (list equal? "Semestru" "I")))
-                                  (get-table-lines (rebuild-filt-table (get-table db "Cursuri") (list (list < "Număr teme" 4) (list equal? "Semestru" "I")))) (list (cons "Număr teme" 4) (cons "Număr credite" 69) (cons "Anul" 1)))))
-
-;(update-table (get-table-lines (get-table db "Studenți"))
-;              (get-table-lines (get-table (delete db "Studenți"  (list (list >= "Medie" 9.5))) "Studenți"))
-;              (replace-all-values (rebuild-filt-table (get-table db "Studenți")  (list (list >= "Medie" 9.5)))
-;                                  (get-table-lines (rebuild-filt-table (get-table db "Studenți") (list (list >= "Medie" 9.5)))) (list (cons "Medie" 10)))) 
-
-;(recreate-table (get-table db table-name) (update-table (get-table-lines (get-table db table-name))
-;              (get-table-lines (get-table (delete db table-name conditions) table-name))
-;              (replace-all-values (rebuild-filt-table (get-table db table-name) conditions)
-;                                  (get-table-lines (rebuild-filt-table (get-table db table-name) conditions)) values)))
 
 (define (filter-values table values) (
                                       cond ((or (null? values) (null? table)) null)
@@ -554,16 +517,51 @@
      )))
 
 
-;(get-table-lines (rebuild-filt-table (get-table db "Cursuri") (list (list < "Număr teme" 4) (list equal? "Semestru" "I"))))
-
-
-(get-table (update (foldl (λ(record db) (insert db "Tabela" record)) (add-table (init-database) (create-table "Tabela" '("Coloana1" "Coloana2" "Coloana3"))) (for/list ([k (in-naturals)] [x (in-range 100)] [y (in-naturals 20)]) (list (cons "Coloana1" k) (cons "Coloana2" x) (cons "Coloana3" y)))) "Tabela" (list (cons "Coloana1" 222) (cons "Coloana2" 694)) (list (list < "Coloana2" 80) (list > "Coloana1" 5))) "Tabela")
-
 ;====================================
 ;=               Bonus              =
 ;=            Natural Join          =
 ;=            20 de puncte          =
 ;====================================
+
+
+(define table3 (list "Category" (list "CATEGORY_ID" 1 2 3 4 5)
+                     (list "CATEGORY_NAME" "Mobiles" "Laptops" "Laptops" "Cameras" "Gaming")))
+(define table4 (list "Category" (list "CATEGORY_ID" 1 1 2 2 3 4)
+                     (list "PRODUCT_NAME" "Nokia" "Samsung" "HP" "Dell" "Apple" "Nikon")))
+(define db2 (add-table (add-table (init-database) table3) table4))
+
+
+(rebuild-filt-table table4 (list (list >= "CATEGORY_ID" 2)))
+(define (take-columns-line table line columns) (
+                                                if (or (null? table) (null? columns))
+                                                   null
+                                                   (cons (list-ref line (get-column-index table (car columns))) (take-columns-line table line (cdr columns))
+                                                ))) ; iau coloanele date de pe un entry din tabel
+(take-columns-line (get-table db "Cursuri") (get-line-index (get-table db "Cursuri") 2) '("Semestru" "Anul"))
+
+(define (common-element list1 list2) (
+                                      cond ((or (null? list1) (null? list2)) null)
+                                           ((member (car list1) list2) (car list1))
+                                           (else (common-element (cdr list1) list2))
+                                      )) ; (primul) element colum a 2 liste
+
+(define (find-lines-by-column table lines column elem) (
+                                                   cond ((or (null? table) (null? lines)) null)
+                                                        ((equal? elem (list-ref (car lines) (get-column-index table column)))
+                                                         (cons (car lines) (find-lines-by-column table (cdr lines) column elem)))
+                                                        (else (find-lines-by-column table (cdr lines) column elem)) 
+                                                   )) ;iau intrarile dintr-o tabela dupa o coloana si o valoare de tip coloana aia meh 
+(find-lines-by-column (get-table db "Cursuri") (get-table-lines (get-table db "Cursuri")) "Anul" "III")
+
+(define (det-columns columns1 columns2) (
+                                         cond ((or (null? columns1) (null? columns2)) null)
+                                              ((member (car columns1)) (cons (car columns1) (det-columns (cdr columns1) columns2)))
+                                              (else (det-columns (cdr columns1) columns2))
+                                              
+                                     )) ;; a fi apelata cu (det-columns (get-columns table) columns) -> determin coloanele dintr-o tabela din cele cerute la join
+
+(define (join table1 table2 lines1 lines2 column) null)
+
 (define natural-join
   (λ (db tables columns conditions)
     null))
