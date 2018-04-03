@@ -526,12 +526,14 @@
 
 (define table3 (list "Category" (list "CATEGORY_ID" 1 2 3 4 5)
                      (list "CATEGORY_NAME" "Mobiles" "Laptops" "Laptops" "Cameras" "Gaming")))
-(define table4 (list "Category" (list "CATEGORY_ID" 1 1 2 2 3 4)
+(define table4 (list "Product" (list "CATEGORY_ID" 1 1 2 2 3 4)
                      (list "PRODUCT_NAME" "Nokia" "Samsung" "HP" "Dell" "Apple" "Nikon")))
 (define db2 (add-table (add-table (init-database) table3) table4))
 
 
 (rebuild-filt-table table4 (list (list >= "CATEGORY_ID" 2)))
+
+
 (define (take-columns-line table line columns) (
                                                 if (or (null? table) (null? columns))
                                                    null
@@ -543,7 +545,7 @@
                                       cond ((or (null? list1) (null? list2)) null)
                                            ((member (car list1) list2) (car list1))
                                            (else (common-element (cdr list1) list2))
-                                      )) ; (primul) element colum a 2 liste
+                                      )) ; (primul) element colum a 2 liste --> (common-element (get-columns table1) (get-columns table2))
 
 (define (find-lines-by-column table lines column elem) (
                                                    cond ((or (null? table) (null? lines)) null)
@@ -551,16 +553,57 @@
                                                          (cons (car lines) (find-lines-by-column table (cdr lines) column elem)))
                                                         (else (find-lines-by-column table (cdr lines) column elem)) 
                                                    )) ;iau intrarile dintr-o tabela dupa o coloana si o valoare de tip coloana aia meh 
-(find-lines-by-column (get-table db "Cursuri") (get-table-lines (get-table db "Cursuri")) "Anul" "III")
+(find-lines-by-column (get-table db "Cursuri") (get-table-lines (get-table db "Cursuri")) "Anul" "V") ; -> yep
 
-(define (det-columns columns1 columns2) (
-                                         cond ((or (null? columns1) (null? columns2)) null)
-                                              ((member (car columns1)) (cons (car columns1) (det-columns (cdr columns1) columns2)))
-                                              (else (det-columns (cdr columns1) columns2))
-                                              
-                                     )) ;; a fi apelata cu (det-columns (get-columns table) columns) -> determin coloanele dintr-o tabela din cele cerute la join
+;(define (det-columns columns1 columns2) (
+;                                         cond ((or (null? columns1) (null? columns2)) null)
+;                                              ((member (car columns1)) (cons (car columns1) (det-columns (cdr columns1) columns2)))
+;                                              (else (det-columns (cdr columns1) columns2))       
+;                                     )) ;; a fi apelata cu (det-columns (get-columns table) columns) -> determin coloanele dintr-o tabela din cele cerute la join
 
-(define (join table1 table2 lines1 lines2 column) null)
+(define (del-col table lines col) (
+                                   if (or (null? table) (null? lines))
+                                      null
+                                      (cons (remove (list-ref (car lines) (get-column-index table col)) (car lines)) (del-col table (cdr lines) col))
+                                   )) ; sterg coloana col din entry-uri date -> merge!
+
+(del-col (get-table db "Cursuri") (get-table-lines (get-table db "Cursuri")) "Semestru")
+
+(define (remove-index listing index) (
+                                     if (or (>= index (length listing)) (null? listing))
+                                        listing
+                                        (append (take listing index) (drop listing (add1 index)))
+                                     ))
+
+(create-table "Final" (append (get-columns table3) (remove (common-element (get-columns table3) (get-columns table4)) (get-columns table4))))
+
+(define (join table1 table2 lines1 lines2 column) (
+                                                   cond ((or (null? lines1) (null? lines2)) null)
+                                                      ((null? (find-lines-by-column table2 lines2 column (list-ref (car lines1) (get-column-index table1 column))))
+                                                              (join table1 table2 (cdr lines1) lines2 column))
+                                                      (else (cons (append (car lines1)
+                                                                           (remove-index (car (find-lines-by-column table2 lines2 column (list-ref (car lines1) (get-column-index table1 column)))) (get-column-index table2 column))) (join table1 table2 (cdr lines1) lines2 column)))
+                                                   )) ;; merge <3
+
+(define (line-to-pair line columns) (
+                                     if (or (null? line) (null? columns))
+                                        null
+                                        (cons (cons (car columns) (car line)) (line-to-pair (cdr line) (cdr columns)))
+                                     )) ;; merge <3
+
+;(line-to-pair (get-line-index (get-table db "Cursuri") 4) (get-columns (get-table db "Cursuri")))
+
+(define (table-lines-to-pairs lines columns) (
+                                              if (null? lines)
+                                                 null
+                                                 (cons (line-to-pair (car lines) columns) (table-lines-to-pairs (cdr lines) columns))
+                                              ))
+
+(table-lines-to-pairs (get-table-lines (get-table db "Cursuri")) (get-columns (get-table db "Cursuri")))
+
+(join table4 table3 (get-table-lines table4) (get-table-lines table3) (common-element (get-columns table4) (get-columns table3)))
+
+
 
 (define natural-join
   (λ (db tables columns conditions)
