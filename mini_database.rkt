@@ -234,13 +234,20 @@
                           (+ (car column) (suma (cdr column)))
                        ))
 
+;(define (number-duplicates
+(find-column (get-table db "Cursuri") "Anul")
+
+(define (delete-duplicates-helper listing acc) (
+                                                cond ((null? listing) acc)
+                                                     ((member (car listing) acc)  (delete-duplicates-helper (cdr listing) acc))
+                                                     (else (delete-duplicates-helper (cdr listing) (cons (car listing) acc)))
+                                                ))
+(define (delete-duplicates listing) (delete-duplicates-helper listing null))
+(delete-duplicates (list 1 2 3 1 5 2 7 9 3))
+
 (define (count column) (
-                        if (< (length column) 1)
-                           0
-                           (if (equal? (cdr column) (remove-duplicates (cdr column)))
-                               (add1 (length (remove-duplicates (cdr column))))
-                               (length (remove-duplicates (cdr column))) ;; asa ca sa treaca testele
-                        )))
+                        length (delete-duplicates column) ;; asa ca sa treaca testele
+                        ))
 
 (define (avg column) (if (null? column)
                          null
@@ -374,12 +381,12 @@
                                   (else (cons (car lines) (filter-null (cdr lines))))))
 
 
-(rebuild-filt-table (get-table db "Cursuri") (list (list < "Număr teme" 4) (list equal? "Semestru" "I"))) ;; merge struna
+(rebuild-filt-table (get-table db "Cursuri") (list (list < "Număr teme" 4) (list equal? "Semestru" "I"))) ;; merge struna -> tabelul filtrat
 ;(get-column-index (get-table db "Cursuri") "Număr teme")
                                  
 ;(get-table-lines (get-table db "Cursuri")) ;; e ok
 ;(get-table-lines (rebuild-filt-table (get-table db "Cursuri") (list (list < "Număr teme" 4) (list equal? "Semestru" "I")))) ;; e ok
-(recreate-table (get-table db "Cursuri") (get-table-lines (rebuild-filt-table (get-table db "Cursuri") (list (list < "Număr teme" 3) (list equal? "Semestru" "I"))))) ;; awww yissss
+(recreate-table (get-table db "Cursuri") (get-table-lines (rebuild-filt-table (get-table db "Cursuri") (list (list < "Număr teme" 4) (list equal? "Semestru" "I"))))) ;; awww yissss
 ; tabel filtrat fara probleme!
 
 (define (find-entry-by-elem table column elem entries) (
@@ -439,6 +446,35 @@
             (eval-columns (rebuild-filt-table (get-table db table-name) conditions) columns)
          ))))
 
+
+;====================================
+;=             Cerința 5            =
+;=           Operația remove        =
+;=              10 puncte           =
+;====================================
+
+(define (checking list1 list2) (
+                                cond ((null? list1) '())
+                                     ((member (car list1) list2) (checking (cdr list1) list2))
+                                     (else (cons (car list1) (checking (cdr list1) list2)))
+                                ))
+;(get-table-lines (rebuild-filt-table (get-table db "Cursuri") (list (list < "Număr teme" 4) (list equal? "Semestru" "I"))))
+;(cons (recreate-table (get-table db "Studenți") (checking (get-table-lines (get-table db "Studenți")) (get-table-lines (rebuild-filt-table (get-table db "Studenți")
+ ;                                                                                         (list (list <= "Medie" 9.85) (list < "Număr matricol" 125)))))) (remove-table db "Studenți"))
+
+;(rebuild-filt-table (get-table db "Studenți") (list (list <= "Medie" 9.85) (list < "Număr matricol" 125)))
+
+;(length (rebuild-filt-table (get-table db "Cursuri") (list (list equal? "Anul" "I") (list equal? "Semestru" "II"))))
+
+(define delete
+  (λ (db table-name conditions)
+    (
+        cond ((null? db) null)
+             ((null? conditions) (cons (cons table-name (get-columns (get-table db table-name))) (remove-table db table-name)))
+             (else (cons (recreate-table (get-table db table-name) (checking (get-table-lines (get-table db table-name)) (get-table-lines (rebuild-filt-table (get-table db table-name)
+                                                                                          conditions)))) (remove-table db table-name)))
+        )))
+
 ;====================================
 ;=             Cerința 4            =
 ;=           Operația update        =
@@ -468,41 +504,61 @@
                                                        (else (cons (replace-values table (car entries) pairs) (replace-all-values table (cdr entries) pairs))))) ;; merge <3
 
 ;; valorile inlocuite
-(recreate-table (get-table db "Cursuri") (replace-all-values (get-table db "Cursuri") (get-table-lines (get-table db "Cursuri")) (list (cons "Număr teme" 4) (cons "Număr credite" 69) (cons "Anul" 1))))
+;(recreate-table (get-table db "Cursuri")
+;                (replace-all-values (get-table db "Cursuri") (get-table-lines (get-table db "Cursuri")) (list (cons "Număr teme" 4) (cons "Număr credite" 69) (cons "Anul" 1))))
 
 ;(rebuild-filt-table (get-table db table-name) conditions)
 
+(define (update-table-helper lines1 lines2 lines3 acc) (
+                                             cond ((null? lines1) acc)
+                                                  ((null? lines2) (append acc lines3))
+                                                  ((null? lines3) (append acc lines2))
+                                                  ((member (car lines1) lines2) (update-table-helper (cdr lines1) (cdr lines2) lines3 (append acc (list (car lines2)))))
+                                                  (else (update-table-helper (cdr lines1) lines2 (cdr lines3) (append acc (list (car lines3)))))
+                                             ))
+(define (update-table lines1 lines2 lines3) (
+                                                    update-table-helper lines1 lines2 lines3 null
+                                                  ))
+;(update db "Studenți" (list (cons "Medie" 10)) (list (list >= "Medie" 9.5)))
+(recreate-table (get-table db "Cursuri")
+              (update-table (get-table-lines (get-table db "Cursuri"))
+              (get-table-lines (get-table (delete db "Cursuri" (list (list < "Număr teme" 4) (list equal? "Semestru" "I"))) "Cursuri"))
+              (replace-all-values (rebuild-filt-table (get-table db "Cursuri") (list (list < "Număr teme" 4) (list equal? "Semestru" "I")))
+                                  (get-table-lines (rebuild-filt-table (get-table db "Cursuri") (list (list < "Număr teme" 4) (list equal? "Semestru" "I")))) (list (cons "Număr teme" 4) (cons "Număr credite" 69) (cons "Anul" 1)))))
+
+;(update-table (get-table-lines (get-table db "Studenți"))
+;              (get-table-lines (get-table (delete db "Studenți"  (list (list >= "Medie" 9.5))) "Studenți"))
+;              (replace-all-values (rebuild-filt-table (get-table db "Studenți")  (list (list >= "Medie" 9.5)))
+;                                  (get-table-lines (rebuild-filt-table (get-table db "Studenți") (list (list >= "Medie" 9.5)))) (list (cons "Medie" 10)))) 
+
+;(recreate-table (get-table db table-name) (update-table (get-table-lines (get-table db table-name))
+;              (get-table-lines (get-table (delete db table-name conditions) table-name))
+;              (replace-all-values (rebuild-filt-table (get-table db table-name) conditions)
+;                                  (get-table-lines (rebuild-filt-table (get-table db table-name) conditions)) values)))
+
+(define (filter-values table values) (
+                                      cond ((or (null? values) (null? table)) null)
+                                           ((member (car (car values)) (get-columns table)) (cons (car values) (filter-values table (cdr values))))
+                                           (else (filter-values table (cdr values)))
+                                      ))
+
 (define update
   (λ (db table-name values conditions)
-    null))
-
-;====================================
-;=             Cerința 5            =
-;=           Operația remove        =
-;=              10 puncte           =
-;====================================
-
-(define (checking list1 list2) (
-                                cond ((null? list1) '())
-                                     ((member (car list1) list2) (checking (cdr list1) list2))
-                                     (else (cons (car list1) (checking (cdr list1) list2)))
-                                ))
-;(get-table-lines (rebuild-filt-table (get-table db "Cursuri") (list (list < "Număr teme" 4) (list equal? "Semestru" "I"))))
-;(cons (recreate-table (get-table db "Studenți") (checking (get-table-lines (get-table db "Studenți")) (get-table-lines (rebuild-filt-table (get-table db "Studenți")
- ;                                                                                         (list (list <= "Medie" 9.85) (list < "Număr matricol" 125)))))) (remove-table db "Studenți"))
-
-;(rebuild-filt-table (get-table db "Studenți") (list (list <= "Medie" 9.85) (list < "Număr matricol" 125)))
-
-;(length (rebuild-filt-table (get-table db "Cursuri") (list (list equal? "Anul" "I") (list equal? "Semestru" "II"))))
-
-(define delete
-  (λ (db table-name conditions)
     (
-        cond ((null? db) null)
-             ((null? conditions) (cons (cons table-name (get-columns (get-table db table-name))) (remove-table db table-name)))
-             (else (cons (recreate-table (get-table db table-name) (checking (get-table-lines (get-table db table-name)) (get-table-lines (rebuild-filt-table (get-table db table-name)
-                                                                                          conditions)))) (remove-table db table-name)))
-        )))
+     cond ((null? db) db)
+          ((null? conditions) db)
+          (else (cons (recreate-table (get-table db table-name) (update-table (get-table-lines (get-table db table-name))
+              (get-table-lines (get-table (delete db table-name conditions) table-name))
+              (replace-all-values (rebuild-filt-table (get-table db table-name) conditions)
+                                  (get-table-lines (rebuild-filt-table (get-table db table-name) conditions)) (filter-values (get-table db table-name) values)))) (remove-table db table-name)))
+     )))
+
+
+;(get-table-lines (rebuild-filt-table (get-table db "Cursuri") (list (list < "Număr teme" 4) (list equal? "Semestru" "I"))))
+
+
+(get-table (update (foldl (λ(record db) (insert db "Tabela" record)) (add-table (init-database) (create-table "Tabela" '("Coloana1" "Coloana2" "Coloana3"))) (for/list ([k (in-naturals)] [x (in-range 100)] [y (in-naturals 20)]) (list (cons "Coloana1" k) (cons "Coloana2" x) (cons "Coloana3" y)))) "Tabela" (list (cons "Coloana1" 222) (cons "Coloana2" 694)) (list (list < "Coloana2" 80) (list > "Coloana1" 5))) "Tabela")
+
 ;====================================
 ;=               Bonus              =
 ;=            Natural Join          =
