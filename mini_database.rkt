@@ -526,12 +526,12 @@
 
 (define table3 (list "Category" (list "CATEGORY_ID" 1 2 3 4 5)
                      (list "CATEGORY_NAME" "Mobiles" "Laptops" "Laptops" "Cameras" "Gaming")))
-(define table4 (list "Product" (list "CATEGORY_ID" 1 1 2 2 3 4)
-                     (list "PRODUCT_NAME" "Nokia" "Samsung" "HP" "Dell" "Apple" "Nikon")))
+(define table4 (list "Product" (list "CATEGORY_ID" 1 1 2 2 3 4 NULL)
+                     (list "PRODUCT_NAME" "Nokia" "Samsung" "HP" "Dell" "Apple" "Nikon" "MUIE")))
 (define db2 (add-table (add-table (init-database) table3) table4))
 
 
-(rebuild-filt-table table4 (list (list >= "CATEGORY_ID" 2)))
+;(rebuild-filt-table table4 (list (list >= "CATEGORY_ID" 2)))
 
 
 (define (take-columns-line table line columns) (
@@ -539,7 +539,7 @@
                                                    null
                                                    (cons (list-ref line (get-column-index table (car columns))) (take-columns-line table line (cdr columns))
                                                 ))) ; iau coloanele date de pe un entry din tabel
-(take-columns-line (get-table db "Cursuri") (get-line-index (get-table db "Cursuri") 2) '("Semestru" "Anul"))
+;(take-columns-line (get-table db "Cursuri") (get-line-index (get-table db "Cursuri") 2) '("Semestru" "Anul"))
 
 (define (common-element list1 list2) (
                                       cond ((or (null? list1) (null? list2)) null)
@@ -553,7 +553,7 @@
                                                          (cons (car lines) (find-lines-by-column table (cdr lines) column elem)))
                                                         (else (find-lines-by-column table (cdr lines) column elem)) 
                                                    )) ;iau intrarile dintr-o tabela dupa o coloana si o valoare de tip coloana aia meh 
-(find-lines-by-column (get-table db "Cursuri") (get-table-lines (get-table db "Cursuri")) "Anul" "V") ; -> yep
+;(find-lines-by-column (get-table db "Cursuri") (get-table-lines (get-table db "Cursuri")) "Anul" "V") ; -> yep
 
 ;(define (det-columns columns1 columns2) (
 ;                                         cond ((or (null? columns1) (null? columns2)) null)
@@ -567,7 +567,7 @@
                                       (cons (remove (list-ref (car lines) (get-column-index table col)) (car lines)) (del-col table (cdr lines) col))
                                    )) ; sterg coloana col din entry-uri date -> merge!
 
-(del-col (get-table db "Cursuri") (get-table-lines (get-table db "Cursuri")) "Semestru")
+;(del-col (get-table db "Cursuri") (get-table-lines (get-table db "Cursuri")) "Semestru")
 
 (define (remove-index listing index) (
                                      if (or (>= index (length listing)) (null? listing))
@@ -575,7 +575,7 @@
                                         (append (take listing index) (drop listing (add1 index)))
                                      ))
 
-(create-table "Final" (append (get-columns table3) (remove (common-element (get-columns table3) (get-columns table4)) (get-columns table4))))
+;(create-table "Final" (append (get-columns table4) (remove (common-element (get-columns table4) (get-columns table3)) (get-columns table3))))
 
 (define (join table1 table2 lines1 lines2 column) (
                                                    cond ((or (null? lines1) (null? lines2)) null)
@@ -599,15 +599,78 @@
                                                  (cons (line-to-pair (car lines) columns) (table-lines-to-pairs (cdr lines) columns))
                                               ))
 
-(table-lines-to-pairs (get-table-lines (get-table db "Cursuri")) (get-columns (get-table db "Cursuri")))
+;(table-lines-to-pairs (get-table-lines (get-table db "Cursuri")) (get-columns (get-table db "Cursuri")))
 
-(join table4 table3 (get-table-lines table4) (get-table-lines table3) (common-element (get-columns table4) (get-columns table3)))
+;(define sugi-pula (join table4 table3 (get-table-lines (rebuild-filt-table table4 (list (list >= "CATEGORY_ID" 2))))
+;                        (get-table-lines table3) (common-element (get-columns table4) (get-columns table3))))
+;liste de entry-uri
 
 
+;(recreate-table (create-table "Final" (append (get-columns table4) (remove (common-element (get-columns table4) (get-columns table3)) (get-columns table3))))
+;               (join table4 table3 (get-table-lines table4) (get-table-lines table3) (common-element (get-columns table4) (get-columns table3))))
+
+
+
+
+
+;(define my-pairs (table-lines-to-pairs sugi-pula (get-columns my-table)))
+;my-pairs
+
+(define (filter-lines-null lines) (
+                                   cond ((null? lines) null)
+                                        ((member NULL (car lines)) (filter-lines-null (cdr lines)))
+                                        (else (cons (car lines) (filter-lines-null (cdr lines))))
+                                   ))
+
+(define (multiple-insert db table-name list-pairs) (
+                                                    cond ((null? db) null)
+                                                         ((null? list-pairs) db)
+                                                         (else (multiple-insert (insert db table-name (car list-pairs)) table-name (cdr list-pairs)))
+                                                    )) ;; inserare multipla
+(define my-table (create-table "Final" (append (get-columns table4) (remove (common-element (get-columns table4) (get-columns table3)) (get-columns table3)))))
+my-table
+
+(simple-select (multiple-insert (add-table db my-table) (get-name my-table)
+                                (table-lines-to-pairs
+                                 (join table4 table3 (get-table-lines (rebuild-filt-table (recreate-table table4 (filter-lines-null (get-table-lines table4)))
+                                                                                          (list (list >= "CATEGORY_ID" 2))))
+                        (get-table-lines table3) (common-element (get-columns table4) (get-columns table3))) (get-columns my-table)))
+               (get-name my-table)
+               '("CATEGORY_NAME" "PRODUCT_NAME"))
+;table 4 = prima tabela
+;table 3 = a doua tabela
+
+;(simple-select (multiple-insert (add-table db join-table) (get-name join-table)
+;                                (table-lines-to-pairs
+;                                 (join (car tables) (last tables) (get-table-lines (rebuild-filt-table (recreate-table (car tables) (filter-lines-null (get-table-lines (car tables))))
+;                                                                                          conditions))
+;                        (get-table-lines (last tables)) (common-element (get-columns (car tables)) (get-columns (last tables)))) (get-columns join-table)))
+;               (get-name join-table) columns)
+
+(define yay (get-table (insert (insert (insert (insert (insert (insert (insert (insert (insert (insert (insert (insert (add-table (add-table (init-database) (create-table "Category" '("ID" "Category_Name"))) (create-table "Product" '("ID" "Product_Name"))) "Category" (list '("ID" . 1) '("Category_Name" . "Mobiles"))) "Category" (list '("ID" . 2) '("Category_Name" . "Laptops"))) "Category" (list '("ID" . 3) '("Category_Name" . "Tablet"))) "Category" (list '("ID" . 4) '("Category_Name" . "Cameras"))) "Category" (list '("ID" . 5) '("Category_Name" . "Gaming"))) "Product" (list '("ID" . 1) '("Product_Name" . "Nokia"))) "Product" (list '("ID" . 1) '("Product_Name" . "Samsung"))) "Product" (list '("ID" . 2) '("Product_Name" . "HP"))) "Product" (list '("ID" . 2) '("Product_Name" . "Dell"))) "Product" (list '("ID" . 3) '("Product_Name" . "Apple"))) "Product" (list '("ID" . 4) '("Product_Name" . "Nikon"))) "Product" (list '("Product_Name" . "Playstation"))) "Product"))
+;yay
+;(insert (insert (insert (insert (insert (insert (insert (insert (insert (insert (insert (insert (add-table (add-table (init-database) (create-table "Category" '("ID" "Category_Name"))) (create-table "Product" '("ID" "Product_Name"))) "Category" (list '("ID" . 1) '("Category_Name" . "Mobiles"))) "Category" (list '("ID" . 2) '("Category_Name" . "Laptops"))) "Category" (list '("ID" . 3) '("Category_Name" . "Tablet"))) "Category" (list '("ID" . 4) '("Category_Name" . "Cameras"))) "Category" (list '("ID" . 5) '("Category_Name" . "Gaming"))) "Product" (list '("ID" . 1) '("Product_Name" . "Nokia"))) "Product" (list '("ID" . 1) '("Product_Name" . "Samsung"))) "Product" (list '("ID" . 2) '("Product_Name" . "HP"))) "Product" (list '("ID" . 2) '("Product_Name" . "Dell"))) "Product" (list '("ID" . 3) '("Product_Name" . "Apple"))) "Product" (list '("ID" . 4) '("Product_Name" . "Nikon"))) "Product" (list '("Product_Name" . "Playstation")))
+;(recreate-table table4 (filter-lines-null (get-table-lines table4)))
+;(recreate-table (rebuild-filt-table (car tables) conditions) (filter-lines-null (get-table-lines (rebuild-filt-table (car tables) conditions))))
+
+;(get-table db (car tables))
+;(get-table db (last tables))
 
 (define natural-join
   (λ (db tables columns conditions)
-    null))
+    (
+     if (null? db)
+        null
+        (
+          let ((join-table (create-table "Final" (append (get-columns (get-table db (car tables)))
+                           (remove (common-element (get-columns (get-table db (car tables))) (get-columns (get-table db (last tables)))) (get-columns (get-table db (last tables))))))))
+           (simple-select (multiple-insert (add-table db join-table) (get-name join-table)
+                                (table-lines-to-pairs
+                                 (join (get-table db (car tables)) (get-table db (last tables)) (get-table-lines (rebuild-filt-table (recreate-table (get-table db (car tables)) (filter-lines-null (get-table-lines (get-table db (car tables)))))
+                                                                                          conditions))
+                        (get-table-lines (get-table db (last tables))) (common-element (get-columns (get-table db (car tables))) (get-columns (get-table db (last tables))))) (get-columns join-table)))
+               (get-name join-table) columns)
+          ))))
 
 
 (define default-results '(#f 0 () your-code-here)) ; ce rezultate default sunt întoarse în exerciții
