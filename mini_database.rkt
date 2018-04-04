@@ -139,24 +139,18 @@
                                                ((null? (get-pair pairs (car columns))) (cons (list (car columns) NULL) (reconstruct-list pairs (cdr columns))))
                                                (else (cons (list (car (get-pair pairs (car columns))) (drop (get-pair pairs (car columns)) 1)) (reconstruct-list pairs (cdr columns))))
                                           )) ;reconstruiesc o lista bazata pe o lista de perechi ce trebuie sa fie inserate
-;(define pairs '(("Anul" . "I") ("Disciplină" . "Matematică")))
-;(reconstruct-list pairs (get-columns (get-table db "Cursuri")))
-;(define table (get-table db "Cursuri"))
+
 (define (pula table listing) (
                               if (or (null? table) (null? listing))
                                  null
                                  (cons (append (car table) (list (last (car listing)))) (pula (cdr table) (cdr listing)))
                               ))
-;(pula (cdr table) (reconstruct-list pairs (get-columns (get-table db "Cursuri"))))
 
 (define (pula2 table listing) (
                               if (or (null? table) (null? listing))
                                  null
                                  (cons (append (list (car table)) (list (last (car listing)))) (pula2 (cdr table) (cdr listing)))
                               ))
-;(define table-pula (create-table "Test" '("Coloana1" "Coloana2" "Coloana3")))
-;(define pairs2 '(("Coloana2" . "Muie") ("Coloana1" . "Nan")))
-;(pula2 (cdr table-pula) (reconstruct-list pairs2 (get-columns table-pula)))
 
 (define (my-insert table record) (
                                   if (or (null? table) (null? record))
@@ -232,15 +226,12 @@
                           (+ (car column) (suma (cdr column)))
                        ))
 
-(find-column (get-table db "Cursuri") "Anul")
-
 (define (delete-duplicates-helper listing acc) (
                                                 cond ((null? listing) acc)
                                                      ((member (car listing) acc)  (delete-duplicates-helper (cdr listing) acc))
                                                      (else (delete-duplicates-helper (cdr listing) (cons (car listing) acc)))
                                                 ))
 (define (delete-duplicates listing) (delete-duplicates-helper listing null))
-(delete-duplicates (list 1 2 3 1 5 2 7 9 3))
 
 (define (count column) (
                         length (delete-duplicates column) ;; asa ca sa treaca testele
@@ -262,28 +253,13 @@
                                    ((equal? operator 'sort-desc) (sort-desc column))
                                    (else (count column)))))
                               
-(define muie (list 4 5 3 8 3))
-;(maximum muie)
-
 (define (filter-col sign column value) (filter (λ (x) (sign x value)) column))
-;(filter-col > (find-column (cdr (get-table db "Cursuri")) "Număr teme") 1)
 
-;(take-line-name (cdr (get-table db "Cursuri")) "Număr teme" 2) ;; ia bine
 (define (get-column-index table column) (
                                          if (null? table)
                                             null
                                             (index (get-columns table) column)
                                          )) ;; iau indexul unei coloane (0 indexed) --> merge!
-;(get-column-index (get-table db "Cursuri") "Anul")
-
-
-;(find-column-with-name (cdr (get-table db "Cursuri")) "Număr teme")
-;(list-ref (take-line-name (cdr (get-table db "Cursuri")) "Disciplină" "Structuri de date") (get-column-index (get-table db "Cursuri") "Anul")) ;; so goood
-;(get-column-index (get-table db "Cursuri") "Număr teme")
-;(filter-col > (find-column (cdr (get-table db "Cursuri")) "Număr teme") 2)
-;(take-line (cdr (get-table db "Cursuri")) 1)
-;(index (get-columns (get-table db "Cursuri")) "Număr teme")
-;(find-column (cdr (get-table db "Cursuri")) "Număr credite")
 
 
 (define (get-line-index-helper table index) (
@@ -297,7 +273,7 @@
                                          null
                                          (get-line-index-helper (cdr table) index)
                                       ))
-;(get-line-index (get-table db "Studenți") 3)
+
 (define (get-table-lines-helper table index) (
                                              cond ((null? table) null)
                                                   ((>= index (sub1 (length (cadr table)))) null)
@@ -307,16 +283,6 @@
                                  if (or (null? table) (not (andmap list? (cdr table))))
                                     null
                                     (get-table-lines-helper table 0)))
-
-;(get-line-index (get-table db "Cursuri") 6)
-
-;(define (filter-table-helper table sign column value index) (
- ;                                                            cond ((or (null? table) (> index (length (cdr table)))) null)
-  ;                                                                ((member (list-ref (get-line-index table index) (get-column-index table column))
-   ;                                                                        (filter-col sign (find-column (cdr table) column) value))
-    ;                                                               (cons (get-line-index table index) (filter-table-helper table sign column value (add1 index))))
-     ;                                                             (else (filter-table-helper table sign column value (add1 index)))
-      ;                                                       )) ; iau toata tabela cu tot cu nume, coloana ca string index incepand cu 1
 
 (define (get-column-size table) (
                                  cond ((null? table) null)
@@ -336,9 +302,6 @@
                                                  cond ((null? table) null)
                                                       ((not (andmap list? (cdr table))) table)
                                                      (else (filter-table-helper table sign column value 0)))) ; filtrez tabela dupa conditie
-
-;(filter-table (get-table db "Cursuri") > "Număr teme" 2)
-
 
 (define (insert-column-helper table column entries) (
                                         if (null? entries)
@@ -377,21 +340,6 @@
                                   ((andmap null? (car lines)) (filter-null (cdr lines)))
                                   (else (cons (car lines) (filter-null (cdr lines))))))
 
-
-;(rebuild-filt-table (get-table db "Cursuri") (list (list < "Număr teme" 4) (list equal? "Semestru" "I"))) ;; merge struna -> tabelul filtrat
-;(get-column-index (get-table db "Cursuri") "Număr teme")
-                                 
-;(get-table-lines (get-table db "Cursuri")) ;; e ok
-;(get-table-lines (rebuild-filt-table (get-table db "Cursuri") (list (list < "Număr teme" 4) (list equal? "Semestru" "I")))) ;; e ok
-;(recreate-table (get-table db "Cursuri") (get-table-lines (rebuild-filt-table (get-table db "Cursuri") (list (list < "Număr teme" 4) (list equal? "Semestru" "I"))))) ;; awww yissss
-; tabel filtrat fara probleme!
-                                                        
-;(find-entry-by-elem (get-table db "Cursuri") "Disciplină" "Inteligență artificială"
-;                    (get-table-lines (rebuild-filt-table (get-table db "Cursuri") (list (list < "Număr teme" 4) (list equal? "Semestru" "I"))))) ;; e ok!
-
-
-;(recreate-table (get-table db "Cursuri") lel)
-
 (define simple-select-filtered
   (λ (db table-name columns conditions)
     (
@@ -399,7 +347,6 @@
           ((null? (rebuild-filt-table (get-table db table-name) conditions)) null)
           (else (search-columns (cdr (rebuild-filt-table (get-table db table-name) conditions)) columns))
      )))
-;(rebuild-filt-table (get-table db table-name) conditions)
 
 (define operators (list 'min 'max 'avg 'count 'sort-asc 'sort-desc 'sum))
 (define operators-list (list 'sort-desc 'sort-asc))
@@ -412,7 +359,6 @@
                                            ((not (pair? (car columns))) (cons (find-column (cdr table) (car columns)) (eval-columns table (cdr columns))))
                                            (else (cons (op-column (car (car columns)) (find-column (cdr table) (cdr (car columns)))) (eval-columns table (cdr columns))))
                                       ))
-;(eval-columns (get-table db "Studenți") (list (cons 'sort-asc "Număr matricol") "Prenume" "Nume" (cons 'count "Medie")))
 
 (define select
   (λ (db table-name columns conditions)
@@ -437,13 +383,6 @@
                                      ((member (car list1) list2) (checking (cdr list1) list2))
                                      (else (cons (car list1) (checking (cdr list1) list2)))
                                 ))
-;(get-table-lines (rebuild-filt-table (get-table db "Cursuri") (list (list < "Număr teme" 4) (list equal? "Semestru" "I"))))
-;(cons (recreate-table (get-table db "Studenți") (checking (get-table-lines (get-table db "Studenți")) (get-table-lines (rebuild-filt-table (get-table db "Studenți")
- ;                                                                                         (list (list <= "Medie" 9.85) (list < "Număr matricol" 125)))))) (remove-table db "Studenți"))
-
-;(rebuild-filt-table (get-table db "Studenți") (list (list <= "Medie" 9.85) (list < "Număr matricol" 125)))
-
-;(length (rebuild-filt-table (get-table db "Cursuri") (list (list equal? "Anul" "I") (list equal? "Semestru" "II"))))
 
 (define delete
   (λ (db table-name conditions)
@@ -460,13 +399,11 @@
 ;=            20 de puncte          =
 ;====================================
 
-;(get-line-index (get-table db "Cursuri") 4)
 (define (replace table entry column value) (
                                          if (or (null? table) (null? entry))
                                             null
                                             (append (take entry (get-column-index table column)) (list value) (drop entry (add1 (get-column-index table column))))
                                          )) ;; merge! -> inlocuiesc o valoare intr-un entry
-;(replace (get-table db "Cursuri") (get-line-index (get-table db "Cursuri") 4) "Număr credite" 69)
 
 (define (replace-values table entry pairs) (
                                             cond ((null? table) null)
@@ -474,19 +411,12 @@
                                                  ((null? pairs) entry)
                                                  (else (replace-values table (replace table entry (car (car pairs)) (cdr (car pairs))) (cdr pairs))) ;; merge!
                                             ))
-;(replace-values (get-table db "Cursuri") (get-line-index (get-table db "Cursuri") 4) (list (cons "Număr teme" 4) (cons "Număr credite" 69) (cons "Anul" 1)))
 
 (define (replace-all-values table entries pairs) (
                                                   cond ((null? table) null)
                                                        ((null? entries) null)
                                                        ((null? pairs) entries)
                                                        (else (cons (replace-values table (car entries) pairs) (replace-all-values table (cdr entries) pairs))))) ;; merge <3
-
-;; valorile inlocuite
-;(recreate-table (get-table db "Cursuri")
-;                (replace-all-values (get-table db "Cursuri") (get-table-lines (get-table db "Cursuri")) (list (cons "Număr teme" 4) (cons "Număr credite" 69) (cons "Anul" 1))))
-
-;(rebuild-filt-table (get-table db table-name) conditions)
 
 (define (update-table-helper lines1 lines2 lines3 acc) (
                                              cond ((null? lines1) acc)
@@ -523,23 +453,11 @@
 ;=            20 de puncte          =
 ;====================================
 
-
-(define table3 (list "Category" (list "CATEGORY_ID" 1 2 3 4 5)
-                     (list "CATEGORY_NAME" "Mobiles" "Laptops" "Laptops" "Cameras" "Gaming")))
-(define table4 (list "Product" (list "CATEGORY_ID" 1 1 2 2 3 4 NULL)
-                     (list "PRODUCT_NAME" "Nokia" "Samsung" "HP" "Dell" "Apple" "Nikon" "MUIE")))
-(define db2 (add-table (add-table (init-database) table3) table4))
-
-
-;(rebuild-filt-table table4 (list (list >= "CATEGORY_ID" 2)))
-
-
 (define (take-columns-line table line columns) (
                                                 if (or (null? table) (null? columns))
                                                    null
                                                    (cons (list-ref line (get-column-index table (car columns))) (take-columns-line table line (cdr columns))
                                                 ))) ; iau coloanele date de pe un entry din tabel
-;(take-columns-line (get-table db "Cursuri") (get-line-index (get-table db "Cursuri") 2) '("Semestru" "Anul"))
 
 (define (common-element list1 list2) (
                                       cond ((or (null? list1) (null? list2)) null)
@@ -553,13 +471,6 @@
                                                          (cons (car lines) (find-lines-by-column table (cdr lines) column elem)))
                                                         (else (find-lines-by-column table (cdr lines) column elem)) 
                                                    )) ;iau intrarile dintr-o tabela dupa o coloana si o valoare de tip coloana aia meh 
-;(find-lines-by-column (get-table db "Cursuri") (get-table-lines (get-table db "Cursuri")) "Anul" "V") ; -> yep
-
-;(define (det-columns columns1 columns2) (
-;                                         cond ((or (null? columns1) (null? columns2)) null)
-;                                              ((member (car columns1)) (cons (car columns1) (det-columns (cdr columns1) columns2)))
-;                                              (else (det-columns (cdr columns1) columns2))       
-;                                     )) ;; a fi apelata cu (det-columns (get-columns table) columns) -> determin coloanele dintr-o tabela din cele cerute la join
 
 (define (del-col table lines col) (
                                    if (or (null? table) (null? lines))
@@ -567,15 +478,11 @@
                                       (cons (remove (list-ref (car lines) (get-column-index table col)) (car lines)) (del-col table (cdr lines) col))
                                    )) ; sterg coloana col din entry-uri date -> merge!
 
-;(del-col (get-table db "Cursuri") (get-table-lines (get-table db "Cursuri")) "Semestru")
-
 (define (remove-index listing index) (
                                      if (or (>= index (length listing)) (null? listing))
                                         listing
                                         (append (take listing index) (drop listing (add1 index)))
                                      ))
-
-;(create-table "Final" (append (get-columns table4) (remove (common-element (get-columns table4) (get-columns table3)) (get-columns table3))))
 
 (define (join table1 table2 lines1 lines2 column) (
                                                    cond ((or (null? lines1) (null? lines2)) null)
@@ -591,30 +498,11 @@
                                         (cons (cons (car columns) (car line)) (line-to-pair (cdr line) (cdr columns)))
                                      )) ;; merge <3
 
-;(line-to-pair (get-line-index (get-table db "Cursuri") 4) (get-columns (get-table db "Cursuri")))
-
 (define (table-lines-to-pairs lines columns) (
                                               if (null? lines)
                                                  null
                                                  (cons (line-to-pair (car lines) columns) (table-lines-to-pairs (cdr lines) columns))
                                               ))
-
-;(table-lines-to-pairs (get-table-lines (get-table db "Cursuri")) (get-columns (get-table db "Cursuri")))
-
-;(define sugi-pula (join table4 table3 (get-table-lines (rebuild-filt-table table4 (list (list >= "CATEGORY_ID" 2))))
-;                        (get-table-lines table3) (common-element (get-columns table4) (get-columns table3))))
-;liste de entry-uri
-
-
-;(recreate-table (create-table "Final" (append (get-columns table4) (remove (common-element (get-columns table4) (get-columns table3)) (get-columns table3))))
-;               (join table4 table3 (get-table-lines table4) (get-table-lines table3) (common-element (get-columns table4) (get-columns table3))))
-
-
-
-
-
-;(define my-pairs (table-lines-to-pairs sugi-pula (get-columns my-table)))
-;my-pairs
 
 (define (filter-lines-null lines) (
                                    cond ((null? lines) null)
@@ -627,34 +515,6 @@
                                                          ((null? list-pairs) db)
                                                          (else (multiple-insert (insert db table-name (car list-pairs)) table-name (cdr list-pairs)))
                                                     )) ;; inserare multipla
-(define my-table (create-table "Final" (append (get-columns table4) (remove (common-element (get-columns table4) (get-columns table3)) (get-columns table3)))))
-my-table
-
-(simple-select (multiple-insert (add-table db my-table) (get-name my-table)
-                                (table-lines-to-pairs
-                                 (join table4 table3 (get-table-lines (rebuild-filt-table (recreate-table table4 (filter-lines-null (get-table-lines table4)))
-                                                                                          (list (list >= "CATEGORY_ID" 2))))
-                        (get-table-lines table3) (common-element (get-columns table4) (get-columns table3))) (get-columns my-table)))
-               (get-name my-table)
-               '("CATEGORY_NAME" "PRODUCT_NAME"))
-;table 4 = prima tabela
-;table 3 = a doua tabela
-
-;(simple-select (multiple-insert (add-table db join-table) (get-name join-table)
-;                                (table-lines-to-pairs
-;                                 (join (car tables) (last tables) (get-table-lines (rebuild-filt-table (recreate-table (car tables) (filter-lines-null (get-table-lines (car tables))))
-;                                                                                          conditions))
-;                        (get-table-lines (last tables)) (common-element (get-columns (car tables)) (get-columns (last tables)))) (get-columns join-table)))
-;               (get-name join-table) columns)
-
-(define yay (get-table (insert (insert (insert (insert (insert (insert (insert (insert (insert (insert (insert (insert (add-table (add-table (init-database) (create-table "Category" '("ID" "Category_Name"))) (create-table "Product" '("ID" "Product_Name"))) "Category" (list '("ID" . 1) '("Category_Name" . "Mobiles"))) "Category" (list '("ID" . 2) '("Category_Name" . "Laptops"))) "Category" (list '("ID" . 3) '("Category_Name" . "Tablet"))) "Category" (list '("ID" . 4) '("Category_Name" . "Cameras"))) "Category" (list '("ID" . 5) '("Category_Name" . "Gaming"))) "Product" (list '("ID" . 1) '("Product_Name" . "Nokia"))) "Product" (list '("ID" . 1) '("Product_Name" . "Samsung"))) "Product" (list '("ID" . 2) '("Product_Name" . "HP"))) "Product" (list '("ID" . 2) '("Product_Name" . "Dell"))) "Product" (list '("ID" . 3) '("Product_Name" . "Apple"))) "Product" (list '("ID" . 4) '("Product_Name" . "Nikon"))) "Product" (list '("Product_Name" . "Playstation"))) "Product"))
-;yay
-;(insert (insert (insert (insert (insert (insert (insert (insert (insert (insert (insert (insert (add-table (add-table (init-database) (create-table "Category" '("ID" "Category_Name"))) (create-table "Product" '("ID" "Product_Name"))) "Category" (list '("ID" . 1) '("Category_Name" . "Mobiles"))) "Category" (list '("ID" . 2) '("Category_Name" . "Laptops"))) "Category" (list '("ID" . 3) '("Category_Name" . "Tablet"))) "Category" (list '("ID" . 4) '("Category_Name" . "Cameras"))) "Category" (list '("ID" . 5) '("Category_Name" . "Gaming"))) "Product" (list '("ID" . 1) '("Product_Name" . "Nokia"))) "Product" (list '("ID" . 1) '("Product_Name" . "Samsung"))) "Product" (list '("ID" . 2) '("Product_Name" . "HP"))) "Product" (list '("ID" . 2) '("Product_Name" . "Dell"))) "Product" (list '("ID" . 3) '("Product_Name" . "Apple"))) "Product" (list '("ID" . 4) '("Product_Name" . "Nikon"))) "Product" (list '("Product_Name" . "Playstation")))
-;(recreate-table table4 (filter-lines-null (get-table-lines table4)))
-;(recreate-table (rebuild-filt-table (car tables) conditions) (filter-lines-null (get-table-lines (rebuild-filt-table (car tables) conditions))))
-
-;(get-table db (car tables))
-;(get-table db (last tables))
 
 (define natural-join
   (λ (db tables columns conditions)
