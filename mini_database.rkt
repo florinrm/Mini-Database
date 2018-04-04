@@ -40,15 +40,14 @@
 (define (get-columns-helper3 table) (
                           if (null? table)
                              null
-                             (cons (car (car table)) (get-columns-helper3 (cdr table)))))
+                             (cons (car (car table)) (get-columns-helper3 (cdr table))))) ;cand sunt elemente in coloane
 
 (define (get-columns table) (
         if (<= (length table) 2)
             null
             (if (not (andmap list? (cdr table)))
                 (cdr (get-columns-helper2 table))
-                (get-columns-helper3 (cdr table))
-                )))
+                (get-columns-helper3 (cdr table)))))
 
 (define get-tables
   (λ (db)
@@ -70,7 +69,7 @@
                                       cond ((null? db) null)
                                            ((equal? table-name (car (car db))) (remove-helper (cdr db) table-name))
                                            (else (cons (car db) (remove-helper (cdr db) table-name)))
-                                      )) 
+                                      )) ; adaug toate tabelele in alta baza de date, cu exceptia celei cautate aka stergere
 
 (define remove-table
   (λ (db table-name)
@@ -140,25 +139,25 @@
                                                (else (cons (list (car (get-pair pairs (car columns))) (drop (get-pair pairs (car columns)) 1)) (reconstruct-list pairs (cdr columns))))
                                           )) ;reconstruiesc o lista bazata pe o lista de perechi ce trebuie sa fie inserate
 
-(define (pula table listing) (
+(define (insert-helper-1 table listing) (
                               if (or (null? table) (null? listing))
                                  null
-                                 (cons (append (car table) (list (last (car listing)))) (pula (cdr table) (cdr listing)))
-                              ))
+                                 (cons (append (car table) (list (last (car listing)))) (insert-helper-1 (cdr table) (cdr listing)))
+                              )) ; inserare in caz ca nu am coloane goale
 
-(define (pula2 table listing) (
+(define (insert-helper-2 table listing) (
                               if (or (null? table) (null? listing))
                                  null
-                                 (cons (append (list (car table)) (list (last (car listing)))) (pula2 (cdr table) (cdr listing)))
-                              ))
+                                 (cons (append (list (car table)) (list (last (car listing)))) (insert-helper-2 (cdr table) (cdr listing)))
+                              )) ; inserare in caz ca am coloane goale
 
 (define (my-insert table record) (
                                   if (or (null? table) (null? record))
                                      null
                                      (append (list (car table)) (
                                       if (andmap list? (cdr table))
-                                         (pula (cdr table) (reconstruct-list record (get-columns table)))
-                                         (pula2 (cdr table) (reconstruct-list record (get-columns table)))
+                                         (insert-helper-1 (cdr table) (reconstruct-list record (get-columns table)))
+                                         (insert-helper-2 (cdr table) (reconstruct-list record (get-columns table)))
                                       )))) ;; fac o lista de mai multe liste cu 2 elemente, transformata dintr-o lista de perechi
 
 (define insert
@@ -231,7 +230,7 @@
                                                      ((member (car listing) acc)  (delete-duplicates-helper (cdr listing) acc))
                                                      (else (delete-duplicates-helper (cdr listing) (cons (car listing) acc)))
                                                 ))
-(define (delete-duplicates listing) (delete-duplicates-helper listing null))
+(define (delete-duplicates listing) (delete-duplicates-helper listing null)) ; iau prima aparitie a fiecarui element in lista
 
 (define (count column) (
                         length (delete-duplicates column) ;; asa ca sa treaca testele
@@ -253,7 +252,7 @@
                                    ((equal? operator 'sort-desc) (sort-desc column))
                                    (else (count column)))))
                               
-(define (filter-col sign column value) (filter (λ (x) (sign x value)) column))
+(define (filter-col sign column value) (filter (λ (x) (sign x value)) column)) ;filtrez o coloana
 
 (define (get-column-index table column) (
                                          if (null? table)
@@ -272,7 +271,7 @@
                                       if (or (null? table) (not (andmap list? (cdr table))))
                                          null
                                          (get-line-index-helper (cdr table) index)
-                                      ))
+                                      )) ; iau un entry / o linie pe un index (0-based 'cus I'm not retarded)
 
 (define (get-table-lines-helper table index) (
                                              cond ((null? table) null)
@@ -282,13 +281,13 @@
 (define (get-table-lines table) (
                                  if (or (null? table) (not (andmap list? (cdr table))))
                                     null
-                                    (get-table-lines-helper table 0)))
+                                    (get-table-lines-helper table 0))) ;iau entry-urile dintr-o tabela
 
 (define (get-column-size table) (
                                  cond ((null? table) null)
                                       ((not (andmap list? (cdr table))) 0)
                                       (else (sub1 (length (second table)))
-                                 )))
+                                 ))) ;dimensiunea unei coloane
 
 (define (filter-table-helper table sign column value index) (
                                                              cond ((or (null? table) (null? (get-line-index table index))) null)
@@ -310,20 +309,20 @@
                                         ))
 (define (insert-column table column entries) (
                                               cons column (insert-column-helper table column entries)
-                                              ))
+                                              )) ;inserare intr-o coloana
 
-(define (insert-pula-mea table columns entries) (
+(define (insert-all table columns entries) (
                                                  if (or (null? table) (null? columns))
                                                     null
-                                                    (cons (insert-column table (car columns) entries) (insert-pula-mea table (cdr columns) entries))
-                                                 ))
+                                                    (cons (insert-column table (car columns) entries) (insert-all table (cdr columns) entries))
+                                                 )) ;inserare in coloane
 
 (define (recreate-table table entries) (
                                         if (not (andmap list? (cdr table)))
                                            table
                                            (if (null? entries)
                                                (cons (car table) (get-columns table))
-                                               (cons (car table) (insert-pula-mea table (get-columns table) entries))
+                                               (cons (car table) (insert-all table (get-columns table) entries))
                                         ))) ; reconstructia de tabel filtrat - o singura lista de entry
 
 
@@ -353,12 +352,12 @@
 (define operators-unary (list 'min 'max 'sum 'count 'avg))
 
                                   
-(define (filter-pairs listing) (filter (λ (x) (pair? x)) listing))
+(define (filter-pairs listing) (filter (λ (x) (pair? x)) listing)) ;vad care sunt perechile din lista de coloane din select
 (define (eval-columns table columns) (
                                       cond ((or (null? table) (null? columns)) null)
                                            ((not (pair? (car columns))) (cons (find-column (cdr table) (car columns)) (eval-columns table (cdr columns))))
                                            (else (cons (op-column (car (car columns)) (find-column (cdr table) (cdr (car columns)))) (eval-columns table (cdr columns))))
-                                      ))
+                                      )) ;evaluez coloanele
 
 (define select
   (λ (db table-name columns conditions)
@@ -382,7 +381,7 @@
                                 cond ((null? list1) '())
                                      ((member (car list1) list2) (checking (cdr list1) list2))
                                      (else (cons (car list1) (checking (cdr list1) list2)))
-                                ))
+                                )) ;vad ce elemente din list1 nu se afla in list2
 
 (define delete
   (λ (db table-name conditions)
@@ -410,13 +409,14 @@
                                                  ((null? entry) null)
                                                  ((null? pairs) entry)
                                                  (else (replace-values table (replace table entry (car (car pairs)) (cdr (car pairs))) (cdr pairs))) ;; merge!
-                                            ))
+                                            )) ; inlocuiesc valori intr-un entry
 
 (define (replace-all-values table entries pairs) (
                                                   cond ((null? table) null)
                                                        ((null? entries) null)
                                                        ((null? pairs) entries)
                                                        (else (cons (replace-values table (car entries) pairs) (replace-all-values table (cdr entries) pairs))))) ;; merge <3
+                                                       ; inlocuiesc valori in mai multe entry-uri
 
 (define (update-table-helper lines1 lines2 lines3 acc) (
                                              cond ((null? lines1) acc)
@@ -427,13 +427,14 @@
                                              ))
 (define (update-table lines1 lines2 lines3) (
                                                     update-table-helper lines1 lines2 lines3 null
-                                                  ))
+                                                  )) ;updatez tabela prin intercalarea liniilor care sunt updatate cu cele care raman la fel
+                                                     ;astfel incat sa refac forma originala a tabelei
 
 (define (filter-values table values) (
                                       cond ((or (null? values) (null? table)) null)
                                            ((member (car (car values)) (get-columns table)) (cons (car values) (filter-values table (cdr values))))
                                            (else (filter-values table (cdr values)))
-                                      ))
+                                      )) ;filtrare dupa valori in tabela
 
 (define update
   (λ (db table-name values conditions)
@@ -482,7 +483,7 @@
                                      if (or (>= index (length listing)) (null? listing))
                                         listing
                                         (append (take listing index) (drop listing (add1 index)))
-                                     ))
+                                     )) ; sterg un element dintr-o lista dupa un index dat (0-indexed)
 
 (define (join table1 table2 lines1 lines2 column) (
                                                    cond ((or (null? lines1) (null? lines2)) null)
@@ -491,24 +492,26 @@
                                                       (else (cons (append (car lines1)
                                                                            (remove-index (car (find-lines-by-column table2 lines2 column (list-ref (car lines1) (get-column-index table1 column)))) (get-column-index table2 column))) (join table1 table2 (cdr lines1) lines2 column)))
                                                    )) ;; merge <3
+                                                   ;; creez entry-uri din ambele tabele pentru a face tabela compusa (joined table)
 
 (define (line-to-pair line columns) (
                                      if (or (null? line) (null? columns))
                                         null
                                         (cons (cons (car columns) (car line)) (line-to-pair (cdr line) (cdr columns)))
-                                     )) ;; merge <3
+                                     )) ;; merge <3 -> convertesc un entry intr-o lista de perechi de forma (nume-coloana . valoare
+                                        ; pentru inserarea in tabela compusa
 
 (define (table-lines-to-pairs lines columns) (
                                               if (null? lines)
                                                  null
                                                  (cons (line-to-pair (car lines) columns) (table-lines-to-pairs (cdr lines) columns))
-                                              ))
+                                              )) ;line-to-pair pentru mai multe linii
 
 (define (filter-lines-null lines) (
                                    cond ((null? lines) null)
                                         ((member NULL (car lines)) (filter-lines-null (cdr lines)))
                                         (else (cons (car lines) (filter-lines-null (cdr lines))))
-                                   ))
+                                   )) ; elimin liniile care au un NULL (nu merge conditionarea pe NULL csf n-ai csf)
 
 (define (multiple-insert db table-name list-pairs) (
                                                     cond ((null? db) null)
