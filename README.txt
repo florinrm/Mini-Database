@@ -1,3 +1,5 @@
+Implementation of a database in Racket (variant of Lisp), using functional programming.
+
 Tema 1 - Paradigme de programare
 Mini Database - Racket
 
